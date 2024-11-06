@@ -1,0 +1,63 @@
+program ::= { function_def };
+
+block ::= "{", { block_statement }, "}" ;
+
+block_statement ::= declaration 
+                  | assignment 
+                  | if_statement 
+                  | while_loop 
+                  | type_match 
+                  | expression
+                  | return_statement ;
+
+declaration ::= type, identifier, [ "=", expression ], ";" ;
+assignment ::= obj_access, "=", expression, ";" ;
+
+if_statement ::= "if", "(", expression, ")", block, [ "else", block ] ;
+while_loop ::= "while", "(", expression, ")", block ;
+
+return_statement ::= "return", [ expression ], ";" ;
+
+function_def ::= "fun", identifier, "(", [ parameters ], ")", block ;
+parameters ::= type, identifier, { ",", type, identifier } ;
+identifier_or_function_call ::= identifier | function_call; 
+function_call ::= identifier, "(", [ arguments ], ")" ;
+arguments ::= expression, { ",", expression } ;
+
+type_match ::= expression, "as", identifier, "match", "{", { match_case }, "}" ;
+match_case ::= type, "=>", block
+             | "null", "=>", block
+             | "_", "=>", block ;
+
+expression ::= or_expression ;
+or_expression ::= and_expression, { "||", and_expression } ;
+and_expression ::= equality_expression, { "&&", equality_expression } ;
+equality_expression ::= relational_expression, [ "==" | "!=", relational_expression ] ;
+relational_expression ::= add_expression, [ "<" | ">" | "<=" | ">=", add_expression ] ;
+add_expression ::= mul_expression, { "+" | "-", mul_expression } ;
+mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
+unary_expression ::= [ "-" | "not" | "!" ], factor ;
+
+factor ::= literal | "(", expression, ")", | obj_access ;
+
+obj_access ::= item, { ".", function_call } ;
+item ::= identifier_or_function_call ;
+
+type ::= "int" | "float" | "bool" | "string" | "dict" ;
+
+literal ::= integer | float | bool | string | dict;
+float ::= integer, ".", digit, { digit } ;
+integer  ::= zero | (non_zero_digit, {digit}) ;
+bool ::= "true" | "false" ;
+string ::= '"', { any_character - '"' }, '"' ;
+dict ::= "{", [ dict_entries ], "}" ;
+dict_entries ::= dict_key, ":", expression, { ",", dict_key, ":", expression } ;
+dict_key ::= integer | float | string ;
+
+identifier ::= letter, { letter | digit | "_" } ;
+
+digit ::= non_zero | zero ;
+non_zero ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+zero ::= "0" ;
+letter ::= "A" | "B" | "C" | ... | "Z" | "a" | "b" | "c" | ... | "z" ;
+any_character ::= ? all visible characters ? ;
