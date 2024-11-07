@@ -7,24 +7,23 @@ block_statement ::= declaration
                   | if_statement 
                   | while_loop 
                   | type_match 
-                  | expression
                   | return_statement ;
 
-declaration ::= type, identifier, [ "=", expression ], ";" ;
-assignment ::= obj_access, "=", expression, ";" ;
+declaration ::= parameter, [ "=", expression ], ";" ;
+assignment ::= obj_access, [ "=", expression ], ";" ;
 
 if_statement ::= "if", "(", expression, ")", block, [ "else", block ] ;
 while_loop ::= "while", "(", expression, ")", block ;
 
 return_statement ::= "return", [ expression ], ";" ;
 
-function_def ::= "fun", identifier, "(", [ parameters ], ")", block ;
-parameters ::= type, identifier, { ",", type, identifier } ;
-identifier_or_function_call ::= identifier | function_call; 
-function_call ::= identifier, "(", [ arguments ], ")" ;
+function_def ::= type, identifier, "(", [ parameters ], ")", block ;
+parameters ::= parameter, { ",", parameter } ;
+parameter ::= type, identifier ;
+identifier_or_function_call ::= identifier, [ "(", [ arguments ], ")" ] ; 
 arguments ::= expression, { ",", expression } ;
 
-type_match ::= expression, "as", identifier, "match", "{", { match_case }, "}" ;
+type_match ::= "match", expression, [ "as", identifier ], "{", { match_case }, "}" ; 
 match_case ::= type, "=>", block
              | "null", "=>", block
              | "_", "=>", block ;
@@ -36,23 +35,23 @@ equality_expression ::= relational_expression, [ "==" | "!=", relational_express
 relational_expression ::= add_expression, [ "<" | ">" | "<=" | ">=", add_expression ] ;
 add_expression ::= mul_expression, { "+" | "-", mul_expression } ;
 mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
-unary_expression ::= [ "-" | "not" | "!" ], factor ;
+unary_expression ::= [ "-" | "not" | "!" ], type_expression ;
+type_expression ::= factor, [ "is", type ] ;
 
 factor ::= literal | "(", expression, ")", | obj_access ;
 
 obj_access ::= item, { ".", function_call } ;
 item ::= identifier_or_function_call ;
 
-type ::= "int" | "float" | "bool" | "string" | "dict" ;
+type ::= "int" | "float" | "bool" | "string" | "dict" | "variant";
 
-literal ::= integer | float | bool | string | dict;
+literal ::= integer | float | bool | string | dictionary;
 float ::= integer, ".", digit, { digit } ;
 integer  ::= zero | (non_zero_digit, {digit}) ;
 bool ::= "true" | "false" ;
 string ::= '"', { any_character - '"' }, '"' ;
-dict ::= "{", [ dict_entries ], "}" ;
-dict_entries ::= dict_key, ":", expression, { ",", dict_key, ":", expression } ;
-dict_key ::= integer | float | string ;
+dictionary ::= "{", [ dict_entries ], "}" ;
+dict_entries ::= expression, ":", expression, { ",", expression, ":", expression } ;
 
 identifier ::= letter, { letter | digit | "_" } ;
 
