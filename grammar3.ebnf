@@ -6,6 +6,7 @@ block_statement ::= declaration
                   | assignment 
                   | if_statement 
                   | while_loop 
+                  | for_each_loop
                   | type_match 
                   | return_statement ;
 
@@ -15,11 +16,13 @@ assignment ::= obj_access, [ "=", expression ], ";" ;
 if_statement ::= "if", "(", expression, ")", block, [ "else", block ] ;
 while_loop ::= "while", "(", expression, ")", block ;
 
+for_each_loop ::= "for", "each", "(", identifier, ",", identifier, ")", "in", identifier, block ;
+
 return_statement ::= "return", [ expression ], ";" ;
 
-function_def ::= type, identifier, "(", [ parameters ], ")", block ;
+function_def ::= func_type, identifier, "(", [ parameters ], ")", block ;
 parameters ::= parameter, { ",", parameter } ;
-parameter ::= type, identifier ;
+parameter ::= type_or_variant, identifier ;
 identifier_or_function_call ::= identifier, [ "(", [ arguments ], ")" ] ; 
 arguments ::= expression, { ",", expression } ;
 
@@ -43,7 +46,9 @@ factor ::= literal | "(", expression, ")", | obj_access ;
 obj_access ::= item, { ".", function_call } ;
 item ::= identifier_or_function_call ;
 
-type ::= "int" | "float" | "bool" | "string" | "dict" | "variant";
+type_or_variant ::= type | "variant";
+func_type ::= type | "void";
+type ::= "int" | "float" | "bool" | "string" | "dict";
 
 literal ::= integer | float | bool | string | dictionary;
 float ::= integer, ".", digit, { digit } ;
