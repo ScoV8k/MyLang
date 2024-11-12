@@ -1,10 +1,11 @@
 from src.lexer.tokens import TokenType, Symbols, Token
 from src.lexer.source import Source, String, File
-# from errors.error_manager import ErrorManager
-# from errors import InvalidTokenError
+from src.errors.error_manager import ErrorManager
+from src.errors.lexer_errors import InvalidTokenError
 import io
 # from tokens import TokenType, Symbols, Token
 # from source import Source, String, File
+
 
 class Lexer():
     def __init__(self, source) -> None:
@@ -14,7 +15,7 @@ class Lexer():
         self.line = 1
         self.newline = None
         self.last_char_part_of_newline = False
-        # self.error_manager = ErrorManager()
+        self.error_manager = ErrorManager()
         self.buffered_newline = False 
         self.last_cr = False
         self._get_next_char()
@@ -55,8 +56,8 @@ class Lexer():
             self.column = 0
             self.newline = None
         self.current_char = self.source.read(1)
-        if self.current_char:
-            self.column += 1
+        # if self.current_char:
+        self.column += 1
         self.check_newline()
         return self.current_char
     
@@ -72,7 +73,7 @@ class Lexer():
 
 
     def _get_current_position(self) -> tuple:
-        return (self.column, self.line)
+        return (self.line, self.column)
     
     def _peek_next_char(self) -> str:
         # return self.source.peek_next_char()
@@ -118,6 +119,8 @@ class Lexer():
             while self._get_current_char().isdecimal(): # 007 jest ok, dodać zakresy wartości dla liczb
                 value = value * 10 + int(self._get_current_char())
                 self._get_next_char()
+            if self._get_current_char() != ' ' or self._get_current_char() != '.':
+                self.error_manager.add_error(InvalidTokenError(self._get_current_position(), self._get_current_char()))
             if self._get_current_char() == '.':
                 self._get_next_char()
                 decimals = int(self._get_current_char())
@@ -128,6 +131,8 @@ class Lexer():
                     decimals = decimals * 10 + int(self._get_current_char())
                     self._get_next_char()
                     decimal_place += 1
+                if self._get_current_char() == '.':
+                    self.error_manager.add_error(InvalidTokenError(self._get_current_position(), self._get_current_char()))
                 return Token(TokenType.FLOAT_VALUE, float(value + decimals / 10**decimal_place) , position)
             return Token(TokenType.INTEGER_VALUE, value, position)
 
@@ -205,7 +210,8 @@ class Lexer():
                     ]:
             if token := fun():
                 return token
-        raise InvalidTokenError(self._get_current_position(), self._get_current_char())
+        # raise InvalidTokenError(self._get_current_position(), self._get_current_char())
+        self.error_manager.add_error(InvalidTokenError(self._get_current_position(), self._get_current_char()))
             
     def get_all_tokens(self):
         tokens = []
@@ -218,7 +224,8 @@ class Lexer():
     
 s = String("\r\na\rb")
 # l = Lexer(io.StringIO("\r\na\rb"))
-l = Lexer(io.StringIO("a\nb\n"))
+# l = Lexer(io.StringIO("a\nb\n"))
+l = Lexer(io.StringIO("abc"))
 print(l._get_current_char())
 print(l._get_current_position())
 print(l._get_next_char())
@@ -227,6 +234,9 @@ print(l._get_next_char())
 print(l._get_current_position())
 print(l._get_next_char())
 print(l._get_current_position())
+
+b = Lexer(io.StringIO("+ - ="))
+print(b.get_all_tokens())
 
 # print(l.get_next_token())
 # print(l.get_next_token())
