@@ -54,6 +54,7 @@ class TokenType(Enum):
     INTEGER_VALUE = auto()
     FLOAT_VALUE = auto()
     STRING_VALUE = auto()
+    UNKNOWN = auto()
     EOF = auto()
 
 class Symbols:

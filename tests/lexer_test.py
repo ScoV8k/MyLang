@@ -8,7 +8,7 @@ import io
 
 def test_lexer_positions():
     l = Lexer(io.StringIO("ab\r\na\rb"))
-    assert l._get_current_char() == "a"
+    assert l.current_char == "a"
     assert l._get_current_position() == (1, 1)
     assert l._get_next_char() == "b"
     assert l._get_current_position() == (1, 2)
@@ -16,15 +16,25 @@ def test_lexer_positions():
     assert l._get_current_position() == (1, 3)
     assert l._get_next_char() == "a"
     assert l._get_current_position() == (2, 1)
-    assert l._get_next_char() == "\r"
+    assert l._get_next_char() == "\n"
     assert l._get_current_position() == (2, 2)
     assert l._get_next_char() == "b"
     assert l._get_current_position() == (3, 1)
 
 
+def test_lexer_eof_position_not_incrementing():
+    l = Lexer(io.StringIO("a"))
+    assert l.current_char == "a"
+    l._get_next_char()
+    assert l.current_char == ""
+    assert l._get_current_position() == (1,2)
+    l._get_next_char()
+    assert l.current_char == ""
+    assert l._get_current_position() == (1,2)
+
 def test_lexer_positions_start_with_newline():
     l = Lexer(io.StringIO("\nb\r\na\rb"))
-    assert l._get_current_char() == "\n"
+    assert l.current_char == "\n"
     assert l._get_current_position() == (1, 1)
     assert l._get_next_char() == "b"
     assert l._get_current_position() == (2, 1)
@@ -32,14 +42,14 @@ def test_lexer_positions_start_with_newline():
     assert l._get_current_position() == (2, 2)
     assert l._get_next_char() == "a"
     assert l._get_current_position() == (3, 1)
-    assert l._get_next_char() == "\r"
+    assert l._get_next_char() == "\n"
     assert l._get_current_position() == (3, 2)
     assert l._get_next_char() == "b"
     assert l._get_current_position() == (4, 1)
 
 def test_lexer_positions_start_with_several_newlines():
     l = Lexer(io.StringIO("\n\n\r\na\rb"))
-    assert l._get_current_char() == "\n"
+    assert l.current_char == "\n"
     assert l._get_current_position() == (1, 1)
     assert l._get_next_char() == "\n"
     assert l._get_current_position() == (2, 1)
@@ -47,23 +57,23 @@ def test_lexer_positions_start_with_several_newlines():
     assert l._get_current_position() == (3, 1)
     assert l._get_next_char() == "a"
     assert l._get_current_position() == (4, 1)
-    assert l._get_next_char() == "\r"
+    assert l._get_next_char() == "\n"
     assert l._get_current_position() == (4, 2)
     assert l._get_next_char() == "b"
     assert l._get_current_position() == (5, 1)
 
 def test_lexer_positions_different_newlines():
     l = Lexer(io.StringIO("\r\n\r\n"))
-    assert l._get_current_char() == "\n"
+    assert l.current_char == "\n"
     assert l._get_current_position() == (1, 1)
     assert l._get_next_char() == "\n"
     assert l._get_current_position() == (2, 1)
 
 def test_lexer_positions_different_newlines2():
     l = Lexer(io.StringIO("\r\n\r\r\n"))
-    assert l._get_current_char() == "\n"
+    assert l.current_char == "\n"
     assert l._get_current_position() == (1, 1)
-    assert l._get_next_char() == "\r"
+    assert l._get_next_char() == "\n"
     assert l._get_current_position() == (2, 1)
     assert l._get_next_char() == "\n"
     assert l._get_current_position() == (3, 1)
@@ -154,17 +164,50 @@ def test_unknown_char():
     # with pytest.raises(InvalidTokenError):
     #     lexer.get_next_token()
 
+def test_number2():
+    source = io.StringIO("2)")
+    lexer = Lexer(source)
+    token = lexer.get_next_token()
+    assert token.type == TokenType.INTEGER_VALUE
+    token = lexer.get_next_token()
+    assert token.type == TokenType.RPAREN
+    token = lexer.get_next_token()
+    assert token.type == TokenType.EOF
+    errors = lexer.error_manager.get_all_errors()
+    assert len(errors) == 0
+
 def test_unknown_char2():
     source = io.StringIO("123$123")
     lexer = Lexer(source)
     token = lexer.get_next_token()
     assert token.value == 123
+    token = lexer.get_next_token()
+    assert token.type == TokenType.UNKNOWN
     errors = lexer.error_manager.get_all_errors()
     assert isinstance(errors[0], InvalidTokenError)
+    token = lexer.get_next_token()
+    assert token.type == TokenType.INTEGER_VALUE
+
     # with pytest.raises(InvalidTokenError):
     #     lexer.get_next_token()
 
-def test_numbers_with_leading_zeros():
+def test_max_integer():
+    source = io.StringIO("2147483647")
+    lexer = Lexer(source)
+    token = lexer.get_next_token()
+    assert token.value == 2147483647
+    errors = lexer.error_manager.get_all_errors()
+    assert len(errors) == 0
+
+def test_overfloat_integer():
+    source = io.StringIO("2147483648")
+    lexer = Lexer(source)
+    token = lexer.get_next_token()
+    assert token.value == None
+    errors = lexer.error_manager.get_all_errors()
+    assert len(errors) == 1
+ 
+def test_numbers_with_leading_zeros(): # nie pozwalać na 007
     source = io.StringIO("007 0.123 000123")
     lexer = Lexer(source)
     token = lexer.get_next_token()

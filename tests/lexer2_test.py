@@ -68,6 +68,16 @@ def test_escape_sequences_in_strings():
     assert token.value == "\tIndented"
 
 
+def test_escape_sequences_in_strings2():
+    source = io.StringIO('"H\\j"')
+    lexer = Lexer(source)
+    token = lexer.get_next_token()
+    assert token.type == TokenType.STRING_VALUE
+    assert token.value == "Hj"
+    errors = lexer.error_manager.get_all_errors()
+    assert len(errors) == 1
+
+
 def test_mixed_whitespace_handling():
     source = io.StringIO("   \t  \n  abc   \t\n  123   \n")
     lexer = Lexer(source)
