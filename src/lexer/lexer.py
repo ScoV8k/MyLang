@@ -1,5 +1,5 @@
 from src.lexer.tokens import TokenType, Symbols, Token
-from src.lexer.source import Source, String, File
+# from src.lexer.source import Source, String, File
 from src.errors.error_manager import ErrorManager
 from src.errors.lexer_errors import InvalidTokenError
 import io
@@ -88,35 +88,19 @@ class Lexer():
             value = [self._get_current_char()]
             self._get_next_char()
             while self._get_current_char().isalnum() or self._get_current_char() == '_':
-                value.append(self._get_current_char()) # do zmainy obsluzyć max dlugosc
+                value.append(self._get_current_char())
                 self._get_next_char()
             value = "".join(value)
             return Token(Symbols.keywords.get(value, TokenType.IDENTIFIER), value, position)
     
-    # def try_build_number(self) -> Token: # budujemy liczbe 1 (123)
-    #     if self._get_current_char().isdecimal():
-    #         position = self._get_current_position()
-    #         value = self._get_current_char()
-    #         self._get_next_char()
-    #         while self._get_current_char().isdecimal(): # 007 jest ok, dodać zakresy wartości dla liczb
-    #             value += self._get_current_char()
-    #             self._get_next_char()
-    #         if self._get_current_char() == '.':
-    #             value += self._get_current_char()
-    #             self._get_next_char()
-    #             while self._get_current_char().isdecimal():
-    #                 value += self._get_current_char()
-    #                 self._get_next_char()
-    #             return Token(TokenType.FLOAT_VALUE, value, position)
-    #         return Token(TokenType.INTEGER_VALUE, value, position)
 
 
-    def try_build_number(self) -> Token: # budujemy liczbe 1 (123)
+    def try_build_number(self) -> Token: 
         if self._get_current_char().isdecimal():
             position = self._get_current_position()
             value = int(self._get_current_char())
             self._get_next_char()
-            while self._get_current_char().isdecimal(): # 007 jest ok, dodać zakresy wartości dla liczb
+            while self._get_current_char().isdecimal(): 
                 value = value * 10 + int(self._get_current_char())
                 self._get_next_char()
             if self._get_current_char() != ' ' or self._get_current_char() != '.':
@@ -136,7 +120,7 @@ class Lexer():
                 return Token(TokenType.FLOAT_VALUE, float(value + decimals / 10**decimal_place) , position)
             return Token(TokenType.INTEGER_VALUE, value, position)
 
-    def try_build_string(self) -> Token: # budujemy string na liście, max dlugosc stringa, weryfikacja czy string nie jest przelamany znakiem nowej lini, obsluzyć nie zamkniety string "asd
+    def try_build_string(self) -> Token:
         if self._get_current_char() == '"':
             position = self._get_current_position()
             value = []
@@ -162,7 +146,7 @@ class Lexer():
             value = "".join(value)
             return Token(TokenType.STRING_VALUE, value, position) 
 
-    def try_build_symbol(self) -> Token:    # obslużyć jednego &, komunikuje bład ale zwraca && i ||
+    def try_build_symbol(self) -> Token:   
         current_char = self._get_current_char()
         position = self._get_current_position()
         next_char = self._peek_next_char()
@@ -185,7 +169,7 @@ class Lexer():
             value = [self._get_current_char()]
             self._get_next_char()
             while self._get_current_char() not in ('\r', '\n') and self._get_current_char() != '':
-                value.append(self._get_current_char()) # nie budujemy stringa
+                value.append(self._get_current_char())
                 self._get_next_char()
             value = "".join(value)
             return Token(TokenType.COMMENT, value, position)
@@ -221,34 +205,3 @@ class Lexer():
             token = self.get_next_token()
         return tokens
     
-    
-s = String("\r\na\rb")
-# l = Lexer(io.StringIO("\r\na\rb"))
-# l = Lexer(io.StringIO("a\nb\n"))
-l = Lexer(io.StringIO("abc"))
-print(l._get_current_char())
-print(l._get_current_position())
-print(l._get_next_char())
-print(l._get_current_position())
-print(l._get_next_char())
-print(l._get_current_position())
-print(l._get_next_char())
-print(l._get_current_position())
-
-b = Lexer(io.StringIO("+ - ="))
-print(b.get_all_tokens())
-
-# print(l.get_next_token())
-# print(l.get_next_token())
-
-
-
-    # source = String("\r\na\rb")
-    # assert source.get_current_char() == "\n"
-    # assert source.get_current_position() == (1, 1)
-    # assert source.get_current_char() == "a"
-    # assert source.get_current_position() == (1, 2)
-    # assert source.get_next_char() == "\r"
-    # assert source.get_current_position() == (2, 2)
-    # assert source.get_current_char() == "b"
-    # assert source.get_current_position() == (3, 2)

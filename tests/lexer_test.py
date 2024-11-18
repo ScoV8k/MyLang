@@ -1,5 +1,5 @@
 from src.lexer.lexer import Lexer
-from src.lexer.source import String, File
+# from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.lexer_errors import InvalidTokenError
 import pytest
