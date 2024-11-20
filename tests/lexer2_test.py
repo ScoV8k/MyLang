@@ -1,7 +1,7 @@
 from src.lexer.lexer import Lexer
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
-from src.errors.lexer_errors import InvalidTokenError
+from src.errors.lexer_errors import InvalidTokenError, IdentifierTooLongError, NumberTooLongError, StringTooLongError, UnterminatedStringError, InvalidEscapeSequenceError, CommentTooLongError, TooManyWhitespacesError, UnknownTokenError
 import pytest
 import io
 
@@ -41,7 +41,7 @@ def test_unterminated_string():
     token = lexer.get_next_token()
     errors = lexer.error_manager.get_all_errors()
     assert isinstance(errors[0], InvalidTokenError)
-    assert errors[0].message == "LexerError (1, 1): Niedomknięty łańcuch znaków."
+    assert errors[0].message == "UnterminatedStringError (1, 1): String nie został poprawnie zakończony."
 
 
 def test_unexpected_characters_in_numbers():
