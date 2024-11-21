@@ -16,8 +16,15 @@ MAX_WHITESPACES = 1024
 
 class Lexer():
     def __init__(self, source, error_manager) -> None: 
+        # MAX_IDENTIFIER_LENGTH = 128
+        # MAX_INT = 2147483647
+        # MAX_FLOAT = 3.402823466e+38
+        # MAX_STRING_LENGTH = 2**16
+        # MAX_COMMENT_LENGTH = 256
+        # MAX_WHITESPACES = 1024
         self.source = source
         self.current_char = chr(2)
+        self.etx = chr(3)
         self.column = 0
         self.line = 1
         self.last_char_part_of_newline = False
@@ -25,20 +32,20 @@ class Lexer():
         self._get_next_char()
 
     def _get_next_char(self):
-        if self.current_char == '':
+        if self.current_char == self.etx:
             return self.current_char
         if self.current_char == '\n':
             self.line += 1
             self.column = 0
         self.current_char = self.source.read(1)
+        if self.current_char == '':
+            self.current_char = self.etx
         self.column += 1
-        self.check_newline()
+        self._check_newline()
         return self.current_char
     
-    def _skip_next_char(self):
-        self.current_char = self.source.read(1)
     
-    def check_newline(self):
+    def _check_newline(self):
         next_char = self._peek_next_char()
         potential_double_char = self.current_char + next_char
         if potential_double_char in ['\n\r', '\r\n']:
@@ -63,65 +70,66 @@ class Lexer():
             value = [self.current_char]
             self._get_next_char()
             while self.current_char.isalnum() or self.current_char == '_':
-                value.append(self.current_char)
-                self._get_next_char()
-                if len(value) > MAX_IDENTIFIER_LENGTH:
+                if len(value) >= MAX_IDENTIFIER_LENGTH:
                     value = "".join(value)
                     self.error_manager.add_error(IdentifierTooLongError(position, value))
-                    return Token(Symbols.keywords.get(value, TokenType.IDENTIFIER), value, position)
+                    raise IdentifierTooLongError(position, value)
+                value.append(self.current_char)
+                self._get_next_char()
             value = "".join(value)
             return Token(Symbols.keywords.get(value, TokenType.IDENTIFIER), value, position)
     
 
 
     def _try_build_number(self) -> Token: 
-        if self.current_char.isdecimal():
-            position = self._get_current_position()
+        if not self.current_char.isdecimal():
+            return None
+        position = self._get_current_position()
 
-            if self.current_char == '0' and self._peek_next_char().isdecimal():
-                self.error_manager.add_error(LeadingZeroError(position))
-                while self.current_char.isdecimal() or self.current_char == ".":
-                    self._get_next_char()
-                return Token(TokenType.INTEGER_VALUE, None, position)
-        
-            value = int(self.current_char)
-            self._get_next_char()
-            while self.current_char.isdecimal(): 
-                value = value * 10 + int(self.current_char)
+        if self.current_char == '0' and self._peek_next_char().isdecimal():
+            self.error_manager.add_error(LeadingZeroError(position))
+            while self.current_char.isdecimal() or self.current_char == ".":
                 self._get_next_char()
-            if abs(value) > MAX_INT:
+            return Token(TokenType.INTEGER_VALUE, None, position)
+    
+        value = int(self.current_char)
+        self._get_next_char()
+        while self.current_char.isdecimal():
+            if value > (MAX_INT - int(self.current_char)) / 10:
                 self.error_manager.add_error(NumberTooBigError(position, value))
-                return Token(TokenType.INTEGER_VALUE, None, position)
-            if self.current_char == '.':
-                self._get_next_char()
-                decimals = int(self.current_char)
-                decimal_place = 1
-                self._get_next_char()
+                raise NumberTooBigError(position, value)
+            value = value * 10 + int(self.current_char) # <= MAX_INT
+            self._get_next_char()
+        if self.current_char == '.':
+            self._get_next_char()
+            decimals = int(self.current_char)
+            decimal_place = 1
+            self._get_next_char()
 
-                while self.current_char.isdecimal():
-                    decimals = decimals * 10 + int(self.current_char)
-                    self._get_next_char()
-                    decimal_place += 1
-                float_value = float(value + decimals / 10**decimal_place)
-                if abs(float_value) > MAX_FLOAT:
-                    self.error_manager.add_error(NumberTooBigError(position, float_value))
-                    float_value = None
-                return Token(TokenType.FLOAT_VALUE, float_value , position)
-            return Token(TokenType.INTEGER_VALUE, value, position)
+            while self.current_char.isdecimal():
+                decimals = decimals * 10 + int(self.current_char)
+                self._get_next_char()
+                decimal_place += 1
+            float_value = float(value + decimals / 10**decimal_place)
+            if abs(float_value) > MAX_FLOAT:
+                self.error_manager.add_error(NumberTooBigError(position, float_value))
+                float_value = None
+            return Token(TokenType.FLOAT_VALUE, float_value , position)
+        return Token(TokenType.INTEGER_VALUE, value, position)
 
     def _try_build_string(self) -> Token: 
         if self.current_char == '"':
             position = self._get_current_position()
             value = []
             self._get_next_char()
-            while self.current_char != '"' and self.current_char != '':
+            while self.current_char != '"' and self.current_char != self.etx:
                 char = self._handle_escaping(value)
-                value.append(char)
-                self._get_next_char()
                 if len(value) >= MAX_STRING_LENGTH:
                     self.error_manager.add_error(StringTooLongError(position))
-                    break
-            if self.current_char == '':
+                    raise StringTooLongError(position)
+                value.append(char)
+                self._get_next_char()
+            if self.current_char == self.etx:
                 self.error_manager.add_error(UnterminatedStringError(position))
             self._get_next_char()
             value = "".join(value)
@@ -169,17 +177,17 @@ class Lexer():
             position = self._get_current_position()
             value = [self.current_char]
             self._get_next_char()
-            while self.current_char not in ('\r', '\n') and self.current_char != '':
+            while self.current_char not in ('\r', '\n') and self.current_char != self.etx:
+                if len(value) >= MAX_COMMENT_LENGTH:
+                    self.error_manager.add_error(CommentTooLongError(position))
+                    raise CommentTooLongError(position)
                 value.append(self.current_char)
                 self._get_next_char()
-                if len(value) > MAX_COMMENT_LENGTH:
-                    self.error_manager.add_error(CommentTooLongError(position))
-                    break
             value = "".join(value)
             return Token(TokenType.COMMENT, value, position)
     
     def _try_build_eof(self) -> Token:
-        if self.current_char == '':
+        if self.current_char == self.etx:
             return Token(TokenType.EOF, None, self._get_current_position())
     
     def _skip_whitespaces(self):
@@ -189,9 +197,7 @@ class Lexer():
             whitespace_count += 1
             if whitespace_count > MAX_WHITESPACES:
                 self.error_manager.add_error(TooManyWhitespacesError(position))
-                while self.current_char.isspace():
-                    self._skip_next_char()
-                break
+                raise TooManyWhitespacesError(position)
             self._get_next_char()
 
     def get_next_token(self) -> Token:
@@ -210,11 +216,9 @@ class Lexer():
         self._get_next_char()
         return token
             
-    def get_all_tokens(self):
-        tokens = []
+    def __iter__(self): 
         token = self.get_next_token()
         while token.type != TokenType.EOF:
-            tokens.append(token)
+            yield token
             token = self.get_next_token()
-        return tokens
-    
+        yield token

@@ -14,19 +14,28 @@ MAX_COMMENT_LENGTH = 256
 MAX_WHITESPACES = 1024
 
 
-def run_lexer_test(source_code, expected_tokens, expected_errors):
+def run_lexer_test(source_code, expected_tokens, expected_errors, expected_exception = None):
     error_manager = ErrorManager()
     lexer = Lexer(io.StringIO(source_code), error_manager)
     actual_tokens = []
+    if expected_exception:
+        with pytest.raises(type(expected_exception)):
+            tokenize(lexer, actual_tokens)
+    else:
+        tokenize(lexer, actual_tokens)
+
+    actual_errors = lexer.error_manager.get_all_errors()
+    assert actual_tokens == expected_tokens
+    assert actual_errors == expected_errors
+
+def tokenize(lexer, actual_tokens):
     while True:
         token = lexer.get_next_token()
         actual_tokens.append(token)
         if token.type == TokenType.EOF:
             break
 
-    actual_errors = lexer.error_manager.get_all_errors()
-    assert actual_tokens == expected_tokens
-    assert actual_errors == expected_errors
+
 
 def test_lexer_positions():
     l = Lexer(io.StringIO("ab\r\na\rb"), ErrorManager())
@@ -48,10 +57,10 @@ def test_lexer_eof_position_not_incrementing():
     l = Lexer(io.StringIO("a"), ErrorManager())
     assert l.current_char == "a"
     l._get_next_char()
-    assert l.current_char == ""
+    assert l.current_char == l.etx
     assert l._get_current_position() == (1,2)
     l._get_next_char()
-    assert l.current_char == ""
+    assert l.current_char == l.etx
     assert l._get_current_position() == (1,2)
 
 def test_lexer_positions_start_with_newline():
@@ -268,14 +277,14 @@ def test_max_integer():
 def test_overfloat_integer():
     source_code = "2147483648"
     expected_tokens = [
-        Token(TokenType.INTEGER_VALUE, None, (1, 1)),
-        Token(TokenType.EOF, None, (1, 11)),
     ]
     expected_errors = [
-        NumberTooBigError((1, 1), 2147483648),
+        NumberTooBigError((1, 1), 214748364),
     ]
 
-    run_lexer_test(source_code, expected_tokens, expected_errors)
+
+    run_lexer_test(source_code, expected_tokens, expected_errors, NumberTooBigError((1, 1), 214748364))
+
 
 
 def test_numbers_with_leading_zeros():
@@ -401,16 +410,13 @@ def test_large_numbers():
     source_code = "2147483647 2147483648 999999999999999999999"
     expected_tokens = [
         Token(TokenType.INTEGER_VALUE, 2147483647, (1, 1)),
-        Token(TokenType.INTEGER_VALUE, None, (1, 12)),
-        Token(TokenType.INTEGER_VALUE, None, (1, 23)),
-        Token(TokenType.EOF, None, (1, 44)),
     ]
     expected_errors = [
-        NumberTooBigError((1, 12), "2147483648"),
-        NumberTooBigError((1, 23), "999999999999999999999"),
+        NumberTooBigError((1, 12), "214748364"),
     ]
 
-    run_lexer_test(source_code, expected_tokens, expected_errors)
+
+    run_lexer_test(source_code, expected_tokens, expected_errors, NumberTooBigError((1, 12), "214748364"))
 
 
 def test_unicode_characters_in_identifiers():
@@ -439,14 +445,12 @@ def test_max_identifier_length():
 def test_too_long_identifier():
     source_code = "a" * (MAX_IDENTIFIER_LENGTH + 1)
     expected_tokens = [
-        Token(TokenType.IDENTIFIER, source_code, (1, 1)),
-        Token(TokenType.EOF, None, (1, MAX_IDENTIFIER_LENGTH + 2)),
     ]
     expected_errors = [
-        IdentifierTooLongError((1, 1), source_code),
+        IdentifierTooLongError((1, 1), "a" * MAX_IDENTIFIER_LENGTH),
     ]
 
-    run_lexer_test(source_code, expected_tokens, expected_errors)
+    run_lexer_test(source_code, expected_tokens, expected_errors, IdentifierTooLongError((1, 1), "a" * MAX_IDENTIFIER_LENGTH))
 
 def test_max_whitespaces():
     source_code = " " * MAX_WHITESPACES + "a"
@@ -460,14 +464,12 @@ def test_max_whitespaces():
 
 
 def test_too_many_whitespaces():
-    source_code = " " * (MAX_WHITESPACES + 1) + "a"
+    source_code = " " * (MAX_WHITESPACES + 1)
     expected_tokens = [
-        Token(TokenType.IDENTIFIER, "a", (1, MAX_WHITESPACES + 1)),
-        Token(TokenType.EOF, None, (1, MAX_WHITESPACES + 2)),
     ]
     expected_errors = [TooManyWhitespacesError((1, 1))]
 
-    run_lexer_test(source_code, expected_tokens, expected_errors)
+    run_lexer_test(source_code, expected_tokens, expected_errors, TooManyWhitespacesError((1, 1)))
 
 def test_max_comment_length():
     source_code = "#" + "a" * (MAX_COMMENT_LENGTH - 1)
@@ -483,9 +485,27 @@ def test_max_comment_length():
 def test_too_long_comment():
     source_code = "#" + "a" * MAX_COMMENT_LENGTH
     expected_tokens = [
-        Token(TokenType.COMMENT, source_code, (1, 1)),
-        Token(TokenType.EOF, None, (1, MAX_COMMENT_LENGTH + 2)),
     ]
     expected_errors = [CommentTooLongError((1, 1))]
 
+    run_lexer_test(source_code, expected_tokens, expected_errors, CommentTooLongError((1, 1)))
+
+def test_max_long_string():
+    source_code = "\"" +"a" * MAX_STRING_LENGTH + "\""
+    expected_tokens = [
+        Token(TokenType.STRING_VALUE, "a" * MAX_STRING_LENGTH, (1, 1)),
+        Token(TokenType.EOF, None, (1, MAX_STRING_LENGTH + 3)),
+
+    ]
+    expected_errors = []
+
     run_lexer_test(source_code, expected_tokens, expected_errors)
+
+
+def test_too_long_string():
+    source_code = "\"" + "a" * (MAX_STRING_LENGTH + 1)+ "\""
+    expected_tokens = [
+    ]
+    expected_errors = [StringTooLongError((1, 1))]
+
+    run_lexer_test(source_code, expected_tokens, expected_errors, StringTooLongError((1, 1)))
