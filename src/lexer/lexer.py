@@ -72,7 +72,7 @@ class Lexer():
             while self.current_char.isalnum() or self.current_char == '_':
                 if len(value) >= MAX_IDENTIFIER_LENGTH:
                     value = "".join(value)
-                    self.error_manager.add_error(IdentifierTooLongError(position, value))
+                    self.error_manager.add_lexer_error(IdentifierTooLongError(position, value))
                     raise IdentifierTooLongError(position, value)
                 value.append(self.current_char)
                 self._get_next_char()
@@ -87,7 +87,7 @@ class Lexer():
         position = self._get_current_position()
 
         if self.current_char == '0' and self._peek_next_char().isdecimal():
-            self.error_manager.add_error(LeadingZeroError(position))
+            self.error_manager.add_lexer_error(LeadingZeroError(position))
             while self.current_char.isdecimal() or self.current_char == ".":
                 self._get_next_char()
             return Token(TokenType.INTEGER_VALUE, None, position)
@@ -96,7 +96,7 @@ class Lexer():
         self._get_next_char()
         while self.current_char.isdecimal():
             if value > (MAX_INT - int(self.current_char)) / 10:
-                self.error_manager.add_error(NumberTooBigError(position, value))
+                self.error_manager.add_lexer_error(NumberTooBigError(position, value))
                 raise NumberTooBigError(position, value)
             value = value * 10 + int(self.current_char) # <= MAX_INT
             self._get_next_char()
@@ -110,9 +110,13 @@ class Lexer():
                 decimals = decimals * 10 + int(self.current_char)
                 self._get_next_char()
                 decimal_place += 1
+                # float_value = float(value + decimals / 10**decimal_place)
+                # if float_value > MAX_FLOAT:
+                #     self.error_manager.add_lexer_error(NumberTooBigError(position, value))
+                #     raise NumberTooBigError(position, value)
             float_value = float(value + decimals / 10**decimal_place)
             if abs(float_value) > MAX_FLOAT:
-                self.error_manager.add_error(NumberTooBigError(position, float_value))
+                self.error_manager.add_lexer_error(NumberTooBigError(position, float_value))
                 float_value = None
             return Token(TokenType.FLOAT_VALUE, float_value , position)
         return Token(TokenType.INTEGER_VALUE, value, position)
@@ -125,12 +129,12 @@ class Lexer():
             while self.current_char != '"' and self.current_char != self.etx:
                 char = self._handle_escaping(value)
                 if len(value) >= MAX_STRING_LENGTH:
-                    self.error_manager.add_error(StringTooLongError(position))
+                    self.error_manager.add_lexer_error(StringTooLongError(position))
                     raise StringTooLongError(position)
                 value.append(char)
                 self._get_next_char()
             if self.current_char == self.etx:
-                self.error_manager.add_error(UnterminatedStringError(position))
+                self.error_manager.add_lexer_error(UnterminatedStringError(position))
             self._get_next_char()
             value = "".join(value)
             return Token(TokenType.STRING_VALUE, value, position) 
@@ -150,7 +154,7 @@ class Lexer():
                 case  "'":
                     char = "\'"
                 case _:
-                    self.error_manager.add_error(InvalidEscapeSequenceError(self._get_current_position(), self.current_char))
+                    self.error_manager.add_lexer_error(InvalidEscapeSequenceError(self._get_current_position(), self.current_char))
                     char = self.current_char
         else:
             char = self.current_char
@@ -167,7 +171,7 @@ class Lexer():
             return Token(token_type, potential_double_char, position)
         elif token_type:= Symbols.chars.get(current_char):
             if next_char and current_char in ['&', '|']:
-                self.error_manager.add_error(InvalidTokenError(position, current_char))
+                self.error_manager.add_lexer_error(InvalidTokenError(position, current_char))
             value = current_char
             self._get_next_char()
             return Token(token_type, value, position)
@@ -179,7 +183,7 @@ class Lexer():
             self._get_next_char()
             while self.current_char not in ('\r', '\n') and self.current_char != self.etx:
                 if len(value) >= MAX_COMMENT_LENGTH:
-                    self.error_manager.add_error(CommentTooLongError(position))
+                    self.error_manager.add_lexer_error(CommentTooLongError(position))
                     raise CommentTooLongError(position)
                 value.append(self.current_char)
                 self._get_next_char()
@@ -196,7 +200,7 @@ class Lexer():
         while self.current_char.isspace():
             whitespace_count += 1
             if whitespace_count > MAX_WHITESPACES:
-                self.error_manager.add_error(TooManyWhitespacesError(position))
+                self.error_manager.add_lexer_error(TooManyWhitespacesError(position))
                 raise TooManyWhitespacesError(position)
             self._get_next_char()
 
@@ -211,7 +215,7 @@ class Lexer():
                     ]:
             if token := fun():
                 return token
-        self.error_manager.add_error(UnknownTokenError(self._get_current_position(), self.current_char))
+        self.error_manager.add_lexer_error(UnknownTokenError(self._get_current_position(), self.current_char))
         token = Token(TokenType.UNKNOWN, None, self._get_current_position())
         self._get_next_char()
         return token

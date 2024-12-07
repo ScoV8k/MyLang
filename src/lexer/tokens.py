@@ -5,6 +5,9 @@ class TokenType(Enum):
     IF = auto()
     ELSE = auto()
     WHILE = auto()
+    FOR = auto()
+    EACH = auto()
+    IN = auto()
     RETURN = auto()
     MATCH = auto()
     AS = auto()
@@ -20,6 +23,7 @@ class TokenType(Enum):
     BOOL = auto()
     STRING = auto()
     DICT = auto()
+    VARIANT = auto()
     
     # operators
     ASSIGN = auto()
@@ -62,6 +66,9 @@ class Symbols:
         "if": TokenType.IF,
         "else": TokenType.ELSE,
         "while": TokenType.WHILE,
+        "for": TokenType.FOR,
+        "each": TokenType.EACH,
+        "in": TokenType.IN,
         "return": TokenType.RETURN,
         "match": TokenType.MATCH,
         "as": TokenType.AS,
@@ -72,6 +79,7 @@ class Symbols:
         "bool": TokenType.BOOL,
         "string": TokenType.STRING,
         "void": TokenType.VOID,
+        "variant": TokenType.VARIANT,
         "is": TokenType.IS,
         "null": TokenType.NULL,
         "dict": TokenType.DICT,

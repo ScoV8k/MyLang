@@ -24,7 +24,7 @@ def run_lexer_test(source_code, expected_tokens, expected_errors, expected_excep
     else:
         tokenize(lexer, actual_tokens)
 
-    actual_errors = lexer.error_manager.get_all_errors()
+    actual_errors = lexer.error_manager.get_all_lexer_errors()
     assert actual_tokens == expected_tokens
     assert actual_errors == expected_errors
 
@@ -127,6 +127,19 @@ def test_identifier_or_keyword():
         Token(TokenType.IF, "if", (1, 1)),
         Token(TokenType.IDENTIFIER, "condition", (1, 4)),
         Token(TokenType.EOF, None, (1, 13)),
+    ]
+    expected_errors = []
+
+    run_lexer_test(source_code, expected_tokens, expected_errors)
+
+def test_identifier_or_keyword2():
+    source_code = "void funkcja()"
+    expected_tokens = [
+        Token(TokenType.VOID, "void", (1, 1)),
+        Token(TokenType.IDENTIFIER, "funkcja", (1, 6)),
+        Token(TokenType.LPAREN, "(", (1, 13)),
+        Token(TokenType.RPAREN, ")", (1, 14)),
+        Token(TokenType.EOF, None, (1, 15)),
     ]
     expected_errors = []
 
@@ -284,7 +297,6 @@ def test_overfloat_integer():
 
 
     run_lexer_test(source_code, expected_tokens, expected_errors, NumberTooBigError((1, 1), 214748364))
-
 
 
 def test_numbers_with_leading_zeros():

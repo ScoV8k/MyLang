@@ -1,0 +1,80 @@
+class ParserError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+    
+    def __eq__(self, other):
+        if not isinstance(other, ParserError):
+            return False
+        return self.message == other.message
+
+
+class UnexpectedToken(ParserError):
+    def __init__(self, position, value):
+        line, column = position
+        message = f"UnexpectedToken ({line}, {column}): Niespodziewany token: '{value}'."
+        super().__init__(message)
+
+class BuildingFunctionError(ParserError):
+    def __init__(self, position, value):
+        line, column = position
+        message = f"SyntaxError ({line}, {column}): Błąd podczas budowania definicji funkcji '{value}'."
+        super().__init__(message)
+
+class InvalidParameterError(ParserError):
+    def __init__(self, position):
+        line, column = position
+        message = f"InvalidParameterError ({line}, {column}): Nie podano prawidłowego parametru."
+        super().__init__(message)
+
+class SameParameterError(ParserError):
+    def __init__(self, position, value):
+        line, column = position
+        message = f"SameParameterError ({line}, {column}): Podano 2 takie same parametry '{value}'."
+        super().__init__(message)
+
+class EmptyBlockOfStatements(ParserError):
+    def __init__(self, position, value):
+        line, column = position
+        message = f"EmptyBlockOfStatements ({line}, {column}): Podano pusty blok. Wymagany statement: '{value}'."
+        super().__init__(message)
+
+class NoIfCondition(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoIfCondition ({line}, {column}): Wymagany warunek struktury if '{token.value}'."
+        super().__init__(message)
+
+
+class ExpectedIfBlockOfStatements(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"ExpectedIfBlockOfStatements ({line}, {column}): Wymagany block po strukturze if '{token.value}'."
+        super().__init__(message)
+
+class ExpectedElseBlockOfStatements(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"ExpectedElseBlockOfStatements ({line}, {column}): Wymagany block po strukturze else '{token.value}'."
+        super().__init__(message)
+
+        
+class InvalidWhileCondition(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidWhileCondition ({line}, {column}): Niepoprawny warunek pętli while '{token.value}'."
+        super().__init__(message)
+
+class ExpectedWhileBlockOfStatements(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"ExpectedWhileBlockOfStatement: ({line}, {column}): Wymagany block po strukturze while '{token.value}'."
+        super().__init__(message)
+
+class ExpectedForEachBlockOfStatements(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"ExpectedForEachBlockOfStatements: ({line}, {column}): Wymagany block po strukturze for each '{token.value}'."
+        super().__init__(message)
