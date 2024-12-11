@@ -78,3 +78,51 @@ class ExpectedForEachBlockOfStatements(ParserError):
         line, column = token.position
         message = f"ExpectedForEachBlockOfStatements: ({line}, {column}): Wymagany block po strukturze for each '{token.value}'."
         super().__init__(message)
+
+
+class NoArgumentExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoArgumentExpression: ({line}, {column}): Brak wyrazenia przy parsowaniu argumentow:  '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidOrExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidOrExpression: ({line}, {column}): Brak wyrazenia po operatorze or: '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidAndExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidAndExpression: ({line}, {column}): Brak wyrazenia po operatorze and: '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidLogicExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidLogicExpression: ({line}, {column}): Niepoprawne wyrazenie po operatorze relacyjnym: '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidExpression: ({line}, {column}): Oczekiwano wyrazenia: '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidArithmeticExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidArithmeticExpression: ({line}, {column}): Niepoprawne wyrazenie po operatorze arytmetycznym: '{token.value}'."
+        super().__init__(message)
+
+class InvalidNegationExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidNegationExpression: ({line}, {column}): Niepoprawne wyrazenie po operatorze negacji: '{token.value}'."
+        super().__init__(message)

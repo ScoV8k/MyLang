@@ -12,11 +12,12 @@ class Program(Node):
         return f"Program na pozycji {self.position} z funkcjami:\n{function_definitions}"
 
 class FunctionDefintion(Node):
-    def __init__(self, position, name, parameters, statements) -> None:
+    def __init__(self, position, type, name, parameters, statements) -> None:
         super().__init__(position)
         self.name = name
         self.parameters = parameters
         self.statements = statements
+        self.type = type
     
     def __str__(self):
         parameters_str = ", ".join(str(param) for param in self.parameters)
@@ -27,29 +28,10 @@ class FunctionDefintion(Node):
         if not isinstance(other, FunctionDefintion):
             return False
         return (self.position == other.position and 
+                self.type == other.type and 
                 self.name == other.name and 
                 self.parameters== other.parameters and
                 self.statements == other.statements)
-
-# class IncludeStatement(Node):
-#     def __init__(self, position, library_name, objects_names) -> None:
-#         super().__init__(position)
-#         self.library_name = library_name
-#         self.objects_names = objects_names
-
-#     def __str__(self):
-#         objects_names = ", ".join(str(object.name) for object in self.objects_names)
-#         return f'Include {self.library_name} with objects {objects_names}'
-
-# class LambdaExpression(Node):
-#     def __init__(self, position, variable_name, statements) -> None:
-#         super().__init__(position)
-#         self.variable_name = variable_name
-#         self.statements = statements
-
-#     def __str__(self):
-#         statements = "\n ".join(str(stmt) for stmt in self.statements)
-#         return f'Lambda {self.variable_name} with statements: {statements}'
 
 class FunctionArguments(Node):
     def __init__(self, position, arguments) -> None:
@@ -148,184 +130,260 @@ class ForEachStatement(Node):
                 self.statements == other.statements and
                 self.position == other.position)
 
-#     def __str__(self):
-#         stmts_str = "\n".join(str(stmt) for stmt in self.statements)
-#         return f'While {self.condition} do:\n    {stmts_str}'
 
-# class BreakStatement(Node):
-#     def __str__(self):
-#         return f'BreakStatement at {self.position}'
-
-# class MultiParameterExpression(Node):
-#     def __init__(self, position, nodes):
-#         super().__init__(position)
-#         self.nodes = nodes
+class MultiParameterExpression(Node):
+    def __init__(self, position, expressions):
+        super().__init__(position)
+        self.expressions = expressions
         
-#     def __str__(self):
-#         nodes_str = ', '.join(str(node) for node in self.nodes)
-#         return f'{self.__class__.__name__}({nodes_str})'
+    def __eq__(self, other):
+        if not isinstance(other, MultiParameterExpression):
+            return False
+        return (self.expressions == other.expressions and 
+                self.position == other.position)
 
-# class OrExpression(MultiParameterExpression):
-#     def __init__(self, position, nodes):
-#         super().__init__(position, nodes)
+class OrExpression(MultiParameterExpression):
+    def __init__(self, position, expressions):
+        super().__init__(position, expressions)
 
-#     def __str__(self):
-#         return super().__str__()
+    def __eq__(self, other):
+        if not isinstance(other, OrExpression):
+            return False
+        return (self.expressions == other.expressions and 
+                self.position == other.position)
         
-# class AndExpression(MultiParameterExpression):
-#     def __init__(self, position, nodes):
-#         super().__init__(position, nodes)
+class AndExpression(MultiParameterExpression):
+    def __init__(self, position, expressions):
+        super().__init__(position, expressions)
 
-#     def __str__(self):
-#         return super().__str__()
-
-# class Negation(Node):
-#     def __init__(self, position, node):
-#         super().__init__(position)
-#         self.node = node
-        
-#     def __str__(self):
-#         return f'Negation of ({self.node}) at {self.position}'
-
-# class ArthExpression(Node):
-#     def __init__(self, position, node):
-#         super().__init__(position)
-#         self.node = node
-
-#     def __str__(self):
-#         return super().__str__()
-
-# class SumExpression(ArthExpression):
-#     def __init__(self, position, node):
-#         super().__init__(position, node)
+    def __eq__(self, other):
+        if not isinstance(other, AndExpression):
+            return False
+        return (self.expressions == other.expressions and 
+                self.position == other.position)
     
-#     def __str__(self):
-#         return super().__str__()
 
-# class SubExpression(ArthExpression):
-#     def __init__(self, position, node):
-#         super().__init__(position, node)
-    
-#     def __str__(self):
-#         return super().__str__()
-
-# class MulExpression(ArthExpression):
-#     def __init__(self, position, node):
-#         super().__init__(position, node)
-    
-#     def __str__(self):
-#         return super().__str__()
-
-# class DivExpression(ArthExpression):
-#     def __init__(self, position, node):
-#         super().__init__(position, node)
-    
-#     def __str__(self):
-#         return super().__str__()
-
-# class BinaryOperation(Node):
-#     def __init__(self, position, left, right):
-#         super().__init__(position)
-#         self.left = left
-#         self.right = right
+class TypeExpression(Node):
+    def __init__(self, position, factor, type):
+        super().__init__(position)
+        self.factor = factor
+        self.type = type
         
-#     def __str__(self):
-#         return f'{str(self.left)} {self.__class__.__name__} {str(self.right)}'
-
-# class EqualOperation(BinaryOperation):
-#     def __init__(self, position, left, right):
-#         super().__init__(position, left, right)
-
-#     def __str__(self):
-#         return super().__str__()
-
-# class NotEqualOperation(BinaryOperation):
-#     def __init__(self, position, left, right):
-#         super().__init__(position, left, right)
-
-#     def __str__(self):
-#         return super().__str__()
-        
-# class GreaterOperation(BinaryOperation):
-#     def __init__(self, position, left, right):
-#         super().__init__(position, left, right)
-
-#     def __str__(self):
-#         return super().__str__()
-        
-# class GreaterEqualOperation(BinaryOperation):
-#     def __init__(self, position, left, right):
-#         super().__init__(position, left, right)
-
-#     def __str__(self):
-#         return super().__str__()
-        
-# class LessOperation(BinaryOperation):
-#     def __init__(self, position, left, right):
-#         super().__init__(position, left, right)
-
-#     def __str__(self):
-#         return super().__str__()
-        
-# class LessEqualOperation(BinaryOperation):
-#     def __init__(self, position, left, right):
-#         super().__init__(position, left, right)
-
-#     def __str__(self):
-#         return super().__str__()
-
-# class LiteralBool(Node):
-#     def __init__(self, position, value) -> None:
-#         super().__init__(position)
-#         self.value = value
-
-#     def __str__(self):
-#         return f'{self.value} at {self.position}'
-
-# class LiteralInt(Node):
-#     def __init__(self, position, value) -> None:
-#         super().__init__(position)
-#         self.value = value
-
-#     def __str__(self):
-#         return f'Integer value {self.value}'
-
-# class LiteralFloat(Node):
-#     def __init__(self, position, value) -> None:
-#         super().__init__(position)
-#         self.value = value
+    def __eq__(self, other):
+        if not isinstance(other, TypeExpression):
+            return False
+        return (self.factor == other.factor and 
+                self.type == other.type and
+                self.position == other.position)
     
-#     def __str__(self):
-#         return f'Float value {self.value}'
 
-# class LiteralString(Node):
-#     def __init__(self, position, value) -> None:
-#         super().__init__(position)
-#         self.value = value
+class Negation(Node):
+    def __init__(self, position, node):
+        super().__init__(position)
+        self.node = node
+        
+    def __eq__(self, other):
+        if not isinstance(other, Negation):
+            return False
+        return (self.node == other.node and 
+                self.position == other.position)
 
-#     def __str__(self):
-#         return f'String value "{self.value}"'
+class ArthExpression(Node):
+    def __init__(self, position, node):
+        super().__init__(position)
+        self.node = node
 
-# class Array(Node):
-#     def __init__(self, position, items) -> None:
-#         super().__init__(position)
-#         self.items = items
+    def __eq__(self, other):
+        if not isinstance(other, ArthExpression):
+            return False
+        return (self.node == other.node and 
+                self.position == other.position)
+
+class SumExpression(ArthExpression):
+    def __init__(self, position, node):
+        super().__init__(position, node)
     
-#     def __str__(self):
-#         items_str = ', '.join(str(item) for item in self.items)
-#         return f'Array [{items_str}]'
+    def __eq__(self, other):
+        if not isinstance(other, SumExpression):
+            return False
+        return (self.node == other.node and 
+                self.position == other.position)
 
-# class Assignment(Node):
-#     def __init__(self, position, target, value):
-#         super().__init__(position)
-#         self.target = target
-#         self.value = value
+class SubExpression(ArthExpression):
+    def __init__(self, position, node):
+        super().__init__(position, node)
+    
+    def __eq__(self, other):
+        if not isinstance(other, SubExpression):
+            return False
+        return (self.node == other.node and 
+                self.position == other.position)
 
-#     def __str__(self):
-#         return f'VariableAssignment of {str(self.target)} to {str(self.value)}'
+class MulExpression(ArthExpression):
+    def __init__(self, position, node):
+        super().__init__(position, node)
+    
+    def __eq__(self, other):
+        if not isinstance(other, MulExpression):
+            return False
+        return (self.node == other.node and 
+                self.position == other.position)
+
+class DivExpression(ArthExpression):
+    def __init__(self, position, node):
+        super().__init__(position, node)
+    
+    def __eq__(self, other):
+        if not isinstance(other, DivExpression):
+            return False
+        return (self.node == other.node and 
+                self.position == other.position)
+
+class BinaryOperation(Node):
+    def __init__(self, position, left, right):
+        super().__init__(position)
+        self.left = left
+        self.right = right
+
+    def __eq__(self, other):
+        if not isinstance(other, BinaryOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+        
+class EqualityOperation(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, EqualityOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+    
+class RelationalExpression(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, RelationalExpression):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+
+class NotEqualOperation(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, NotEqualOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+        
+class GreaterOperation(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, GreaterOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+        
+class GreaterEqualOperation(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, GreaterEqualOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+        
+class LessOperation(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, LessOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+        
+class LessEqualOperation(BinaryOperation):
+    def __init__(self, position, left, right):
+        super().__init__(position, left, right)
+
+    def __eq__(self, other):
+        if not isinstance(other, LessEqualOperation):
+            return False
+        return (self.left == other.left and 
+                self.right == other.right and 
+                self.position == other.position)
+
+class BoolValue(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, BoolValue):
+            return False
+        return (self.value == other.value and 
+                self.position == other.position)
+
+class IntegerValue(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, IntegerValue):
+            return False
+        return (self.value == other.value and 
+                self.position == other.position)
+
+class FloatValue(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+    
+    def __eq__(self, other):
+        if not isinstance(other, FloatValue):
+            return False
+        return (self.value == other.value and 
+                self.position == other.position)
+
+class StringValue(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, StringValue):
+            return False
+        return (self.value == other.value and 
+                self.position == other.position)
+
+class Assignment(Node):
+    def __init__(self, position, target, value):
+        super().__init__(position)
+        self.target = target
+        self.value = value
+
+    def __str__(self):
+        return f'VariableAssignment of {str(self.target)} to {str(self.value)}'
 
 class FunctionCall(Node):
-    def __init__(self, position, function_name, arguments) -> None:
+    def __init__(self, position, function_name, arguments=None) -> None:
         super().__init__(position)
         self.function_name = function_name
         self.arguments = arguments
@@ -335,6 +393,19 @@ class FunctionCall(Node):
             return False
         return (self.function_name == other.function_name and 
                 self.arguments == other.arguments and
+                self.position == other.position)
+    
+class ObjectAccess(Node):
+    def __init__(self, position, item, function_calls) -> None:
+        super().__init__(position)
+        self.item = item
+        self.function_calls = function_calls
+    
+    def __eq__(self, other):
+        if not isinstance(other, ObjectAccess):
+            return False
+        return (self.item == other.item and 
+                self.function_calls == other.function_calls and
                 self.position == other.position)
     
 class Block(Node):
