@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import FunctionArguments, FunctionCall, Identifier, ObjectAccess, Parameter, FunctionDefintion
+from src.parser.objects import FunctionArguments, FunctionCall, Identifier, IntegerValue, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, TypeExpression
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
@@ -129,3 +129,66 @@ def test_object_access():
     expected_object_access = ObjectAccess((1, 1), expected_identifier, [expected_funcall])
     assert obj_access == expected_object_access
 
+
+def test_literal():
+    source_code = "123"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    literal = parser.parse_literal()
+    expected_literal = IntegerValue((1, 1), 123)
+    assert literal == expected_literal
+
+def test_string_factor():
+    source_code = "\"abc\""
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    literal = parser.parse_factor()
+    expected_literal = StringValue((1, 1), "abc")
+    assert literal == expected_literal
+
+def test_type_expression():
+    source_code = "\"abc\" is float"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    literal = parser.parse_type_expression()
+    expected_factor = StringValue((1, 1), "abc")
+    expected_literal = TypeExpression((1, 1), expected_factor, "float")
+    assert literal == expected_literal
+
+
+def test_unary_expression():
+    source_code = "not \"abc\" is float"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_unary_expression()
+    expected_factor = StringValue((1, 5), "abc")
+    expected_type_expression = TypeExpression((1, 5), expected_factor, "float")
+    expected_unary_expression = Negation((1, 1), expected_type_expression)
+    assert expression == expected_unary_expression
+
+
+def test_mul_expression():
+    source_code = "-5 * 3 / 2"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_multiplication_expression()
+    expected_factor = IntegerValue((1, 2), 5)
+    expected_type_expression = TypeExpression((1, 1), expected_factor, "int")
+    expected_unary_expression = Negation((1, 1), expected_type_expression)
+    expected_mul_expression = MulExpression((1, 1), )
+    assert expression == expected_unary_expression

@@ -126,3 +126,16 @@ class InvalidNegationExpression(ParserError):
         line, column = token.position
         message = f"InvalidNegationExpression: ({line}, {column}): Niepoprawne wyrazenie po operatorze negacji: '{token.value}'."
         super().__init__(message)
+
+
+class DictionaryEntriesError(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"DictionaryEntriesError: ({line}, {column}): Wymagane podanie wartosci slownika '{token.value}'."
+        super().__init__(message)
+
+class DictionaryEntryError(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"DictionaryEntryError: ({line}, {column}): Niepoprawna wartosc slowika '{token.value}'."
+        super().__init__(message)

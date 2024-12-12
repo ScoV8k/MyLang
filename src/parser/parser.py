@@ -1,6 +1,6 @@
 from src.lexer.tokens import TokenType, Symbols, Token
-from src.errors.parser_errors import ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAndExpression, InvalidArithmeticExpression, InvalidExpression, InvalidLogicExpression, InvalidOrExpression, InvalidWhileCondition, NoArgumentExpression, NoIfCondition, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements
-from src.parser.objects import AndExpression, Block, BoolValue, DivExpression, EqualityOperation, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerValue, LessEqualOperation, LessOperation, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringValue, SubExpression, SumExpression, TypeExpression, WhileStatement
+from src.errors.parser_errors import DictionaryEntriesError, DictionaryEntryError, ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAndExpression, InvalidArithmeticExpression, InvalidExpression, InvalidLogicExpression, InvalidOrExpression, InvalidWhileCondition, NoArgumentExpression, NoIfCondition, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements
+from src.parser.objects import AndExpression, Block, BoolValue, Dictionary, DictionaryEntry, DivExpression, EqualityOperation, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerValue, LessEqualOperation, LessOperation, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringValue, SubExpression, SumExpression, TypeExpression, WhileStatement
 from typing import Optional
 import io
 
@@ -41,14 +41,14 @@ class Parser:
     def _get_next_token(self):
         self.current_token = self.lexer.get_next_token()
 
-    def raise_exception(self, token_type):
-        raise SyntaxError() #currentTokenType na tekst?
+    def raise_exception(self):
+        raise SyntaxError()
 
     def _consume(self, token_type):
         if self.current_token.type == token_type:
             self._get_next_token()
         else:
-            raise SyntaxError(f"Expected token {token_type}, but got {self.current_token.type}")
+            raise SyntaxError(f"Oczekiwano tokenu {token_type}, otrzymano {self.current_token.type}")
 
     def consume_token(self):
         self.current_token = self.lexer.get_next_token()
@@ -108,8 +108,6 @@ class Parser:
         params = self.parse_parameters()
         self.must_be(TokenType.RPAREN)
         block_statements = self.parse_block()
-        # if not block_statements:
-        #     ExpectedBlockStatements(self.current_token, 'Expected block statements in function definition')
         return FunctionDefintion(position, type, name, params, block_statements)
 
 
@@ -162,7 +160,6 @@ class Parser:
                 raise ExpectedElseBlockOfStatements(self.current_token)
         return IfStatement(position, condition, if_block, else_block)
     
-    #while = "while", "(", expression, ")", statements; 
     #while_loop ::= "while", "(", expression, ")", block ;
     def parse_while_loop(self):
         if self.try_consume(TokenType.WHILE):
@@ -199,6 +196,7 @@ class Parser:
             return ForEachStatement(position, key, value, struct, for_each_block)
         return None
     
+    # return_statement ::= "return", [ expression ], ";" ;
     def parse_return_statement(self):
         position = self.current_token.position
         if not self.try_consume(TokenType.RETURN):
@@ -207,7 +205,7 @@ class Parser:
         self.must_be(TokenType.SEMICOLON)
         return ReturnStatement(position, expr)
     
-
+    # obj_access ::= item, { ".", function_call } ;
     def parse_object_access(self):
         position = self.current_token.position
 
@@ -230,9 +228,7 @@ class Parser:
 
         return current_item
 
-        
-
-    # SPRAWDZIĆ BO MAM WRAZENIE ZE COS NA 100% JEST ŹLE
+    # identifier_or_function_call ::= identifier, [ "(", [ arguments ], ")" ] ; 
     def parse_identifier_or_function_call(self):
         position = self.current_token.position
         if (identifier := self.parse_identifier()) == None:
@@ -245,6 +241,7 @@ class Parser:
             self.must_be(TokenType.RPAREN)
             return FunctionCall(position, identifier, arguments)
     
+    # arguments ::= expression, { ",", expression } ;
     def parse_arguments(self):
         argumentsList = []
         if (argument := self.parse_expression()) == None:
@@ -337,13 +334,14 @@ class Parser:
             return mul_expr
         return expression_type(position, expressions)
     
-     # mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
+    # mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
     def parse_multiplication_expression(self):
         position = self.current_token.position
         if not (unary_expr := self.parse_unary_expression()):
             return None
         expressions = [unary_expr]
-        while expression_type := self.ARTH_OPERATORS.get(self.current_token.type):
+        while expression_type := self.MUL_OPERATORS.get(self.current_token.type):
+            type = expression_type
             self.consume_token()
             if not (expr := self.parse_unary_expression()):
                 error = InvalidArithmeticExpression(self.current_token)
@@ -352,26 +350,28 @@ class Parser:
             expressions.append(expr)
         if len(expressions) == 1:
             return unary_expr
-        return expression_type(position, expressions)
+        return type(position, expressions)
     
     # unary_expression ::= [ "-" | "not" | "!" ], type_expression ;
     def parse_unary_expression(self):
-        if not self.current_token.value in ["-", "not", "!"]:
-            return None
         position = self.current_token.position
-        self.consume_token()
-        if not (expr := self.parse_type_expression()):
-            error = InvalidArithmeticExpression(self.current_token)
-            self.error_manager.add_parser_error(error)
-            raise InvalidArithmeticExpression(self.current_token)
-        return Negation(position, expr)
+        if self.current_token.value in ["-", "not", "!"]:
+            self.consume_token()
+            if not (expr := self.parse_type_expression()):
+                error = InvalidArithmeticExpression(self.current_token)
+                self.error_manager.add_parser_error(error)
+                raise InvalidArithmeticExpression(self.current_token)
+            return Negation(position, expr)
+        if not (type_expr := self.parse_type_expression()):
+            return None
+        return type_expr
+
     
     # type_expression ::= factor, [ "is", type ] ;
     def parse_type_expression(self):
         position = self.current_token.position
         if not (factor := self.parse_factor()):
             return None
-        position = self.current_token.position
         if self.try_consume(TokenType.IS):
             if not (type := self.parse_type()):
                 error = InvalidArithmeticExpression(self.current_token)
@@ -384,13 +384,6 @@ class Parser:
     def parse_factor(self):
         if obj_access := self.parse_object_access():
             return obj_access
-        if expression := self.parse_expression():
-            return expression
-        if literal := self.parse_literal():
-            return literal
-        return None
-    
-    def parse_expression(self):
         if self.try_consume(TokenType.LPAREN):
             if not (expression := self.parse_or_expression()):
                 error = InvalidExpression(self.current_token)
@@ -398,7 +391,20 @@ class Parser:
                 raise InvalidExpression(self.current_token) 
             self.must_be(TokenType.RPAREN)
             return expression
+        if literal := self.parse_literal():
+            return literal
         return None
+    
+    # expression ::= or_expression ;
+    # def parse_expression(self):
+    #     if self.try_consume(TokenType.LPAREN):
+    #         if not (expression := self.parse_or_expression()):
+    #             error = InvalidExpression(self.current_token)
+    #             self.error_manager.add_parser_error(error)
+    #             raise InvalidExpression(self.current_token) 
+    #         self.must_be(TokenType.RPAREN)
+    #         return expression
+    #     return None
 
 
     # literal ::= integer | float | bool | string | dictionary;
@@ -439,6 +445,59 @@ class Parser:
         if (token := self.try_consume(TokenType.STRING_VALUE)) == None:
             return None
         return StringValue(position, token.value)
+    
+    # dictionary ::= "{", [ dict_entries ], "}" ;
+    def parse_dictionary(self):
+        position = self.current_token.position
+        if self.try_consume(TokenType.LBRACE) == None:
+            return None
+        if not (dictionary_entries := self.parse_dictionary_entries()):
+                error = DictionaryEntriesError(self.current_token)
+                self.error_manager.add_parser_error(error)
+                raise DictionaryEntriesError(self.current_token) 
+        self.must_be(TokenType.RBRACE)
+        return Dictionary(position, dictionary_entries)
+
+
+    # dictionary ::= "{", [ dict_entries ], "}" ;
+    def parse_dictionary_entries(self):
+        position = self.current_token.position
+        if not (entry := self.parse_dictionary_entry()):
+            return None
+        entries = [entry]
+        while self.try_consume(TokenType.COMMA):
+            if not (entry := self.parse_dictionary_entry()):
+                error = DictionaryEntriesError(self.current_token)
+                self.error_manager.add_parser_error(error)
+                raise DictionaryEntriesError(self.current_token) 
+            entries.append(entry)
+        return entries
+            
+
+
+    
+    def parse_dictionary_entry(self):
+        position = self.current_token.position
+        if not (expression := self.parse_or_expression()):
+            return None
+        self.must_be(TokenType.SEMICOLON)
+        if not (expression2 := self.parse_or_expression()):
+            error = DictionaryEntryError(self.current_token)
+            self.error_manager.add_parser_error(error)
+            raise DictionaryEntryError(self.current_token)
+        return  DictionaryEntry(position, expression, expression2)
+        
+
+
+
+        # if self.try_consume(TokenType.LBRACE) == None:
+        #     return None
+        # if not (dictionary_entries := self.parse_dictionary_entries()):
+        #         error = DictionaryEntriesError(self.current_token)
+        #         self.error_manager.add_parser_error(error)
+        #         raise DictionaryEntriesError(self.current_token) 
+        # self.must_be(TokenType.RBRACE)
+        # return Dictionary(position, dictionary_entries)
 
 
 

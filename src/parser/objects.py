@@ -372,6 +372,31 @@ class StringValue(Node):
             return False
         return (self.value == other.value and 
                 self.position == other.position)
+    
+
+class Dictionary(Node):
+    def __init__(self, position, dictionary_entries) -> None:
+        super().__init__(position)
+        self.dictionary_entries = dictionary_entries
+
+    def __eq__(self, other):
+        if not isinstance(other, Dictionary):
+            return False
+        return (self.dictionary_entries == other.dictionary_entries and 
+                self.position == other.position)
+    
+class DictionaryEntry(Node):
+    def __init__(self, position, expr1, expr2) -> None:
+        super().__init__(position)
+        self.expr1 = expr1
+        self.expr2 = expr2
+
+    def __eq__(self, other):
+        if not isinstance(other, Dictionary):
+            return False
+        return (self.expr1 == other.expr1 and
+                self.expr2 == other.expr2 and  
+                self.position == other.position)
 
 class Assignment(Node):
     def __init__(self, position, target, value):
