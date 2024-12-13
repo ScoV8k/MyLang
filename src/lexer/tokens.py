@@ -52,6 +52,7 @@ class TokenType(Enum):
     COMMA = auto()
     DOT = auto()
     COLON = auto()
+    UNDERSCORE = auto()
 
     # diff
     IDENTIFIER = auto()
@@ -103,6 +104,7 @@ class Symbols:
         '>': TokenType.GREATER_THAN,
         '!': TokenType.NOT,
         '#': TokenType.COMMENT,
+        '_': TokenType.UNDERSCORE
     }
 
     double_chars = {

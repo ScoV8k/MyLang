@@ -139,3 +139,40 @@ class DictionaryEntryError(ParserError):
         line, column = token.position
         message = f"DictionaryEntryError: ({line}, {column}): Niepoprawna wartosc slowika '{token.value}'."
         super().__init__(message)
+
+class NoTypeMatchExpressionError(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoTypeMatchExpressionError: ({line}, {column}): Brak wyrażenia w instrukcji 'match': '{token.value}'."
+        super().__init__(message)
+
+
+class NoIdentifierAfterAs(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoIdentifierAfterAs: ({line}, {column}): Oczekiwano identyfikatora po słowie kluczowym 'as': '{token.value}'."
+        super().__init__(message)
+
+
+class NoBlockInMatchCaseError(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoBlockInMatchCaseError: ({line}, {column}): Oczekiwano bloku kodu w instrukcji 'match': '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidMultiplicationExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidMultiplicationExpression: ({line}, {column}): Niepoprawne wyrażenie po operatorze mnożenia/dzielenia: '{token.value}'."
+        super().__init__(message)
+
+class InvalidAddExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidAddExpression: ({line}, {column}): Niepoprawne wyrażenie po operatorze dodawania/odejmowania: '{token.value}'."
+        super().__init__(message)
+
+        InvalidRelationalExpression
+
+        InvalidEqualityExpression
