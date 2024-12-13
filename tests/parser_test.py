@@ -190,5 +190,5 @@ def test_mul_expression():
     expected_factor = IntegerValue((1, 2), 5)
     expected_type_expression = TypeExpression((1, 1), expected_factor, "int")
     expected_unary_expression = Negation((1, 1), expected_type_expression)
-    expected_mul_expression = MulExpression((1, 1), )
+    expected_mul_expression = [MulExpression((1, 1), expected_unary_expression,  )]
     assert expression == expected_unary_expression

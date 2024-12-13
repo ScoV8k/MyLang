@@ -335,22 +335,41 @@ class Parser:
         return expression_type(position, expressions)
     
     # mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
+    # def parse_multiplication_expression(self):
+    #     position = self.current_token.position
+    #     if not (unary_expr := self.parse_unary_expression()):
+    #         return None
+    #     expressions = [unary_expr]
+    #     while expression_type := self.MUL_OPERATORS.get(self.current_token.type):
+    #         type = expression_type
+    #         self.consume_token()
+    #         if not (expr := self.parse_unary_expression()):
+    #             error = InvalidArithmeticExpression(self.current_token)
+    #             self.error_manager.add_parser_error(error)
+    #             raise InvalidArithmeticExpression(self.current_token)
+    #         expressions.append(expr)
+    #     if len(expressions) == 1:
+    #         return unary_expr
+    #     return type(position, expressions)
+    
+
     def parse_multiplication_expression(self):
         position = self.current_token.position
         if not (unary_expr := self.parse_unary_expression()):
             return None
-        expressions = [unary_expr]
-        while expression_type := self.MUL_OPERATORS.get(self.current_token.type):
-            type = expression_type
+        expressions = []
+        while creator := self.MUL_OPERATORS.get(self.current_token.type):
             self.consume_token()
-            if not (expr := self.parse_unary_expression()):
-                error = InvalidArithmeticExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
+            if next_expr := self.parse_unary_expression():
+                expressions.append(creator(self.current_token.position, unary_expr, next_expr))
+            else:
                 raise InvalidArithmeticExpression(self.current_token)
-            expressions.append(expr)
         if len(expressions) == 1:
-            return unary_expr
-        return type(position, expressions)
+            return unary_expr                     
+        return expressions
+
+    
+    # 
     
     # unary_expression ::= [ "-" | "not" | "!" ], type_expression ;
     def parse_unary_expression(self):
