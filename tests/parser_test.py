@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import FunctionArguments, FunctionCall, Identifier, IntegerValue, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, TypeExpression
+from src.parser.objects import DivExpression, FunctionArguments, FunctionCall, Identifier, IntegerValue, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, TypeExpression
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
@@ -187,8 +187,13 @@ def test_mul_expression():
     parser = Parser(lexer, error_manager)
 
     expression = parser.parse_multiplication_expression()
-    expected_factor = IntegerValue((1, 2), 5)
-    expected_type_expression = TypeExpression((1, 1), expected_factor, "int")
-    expected_unary_expression = Negation((1, 1), expected_type_expression)
-    expected_mul_expression = [MulExpression((1, 1), expected_unary_expression,  )]
-    assert expression == expected_unary_expression
+    int = IntegerValue((1, 6), 3)
+    int2 = IntegerValue((1, 10), 2)
+    int3 = IntegerValue((1,2), 5)
+    expected_type_expression = TypeExpression((1, 1), int, "int")
+    negation = Negation((1, 1), int3)
+    expected_factor2 = IntegerValue((1, 2), 5)
+    mul = MulExpression((1,8), negation, int)
+    div = DivExpression((1, 11), int, int2)
+    expected_mul_expression = [mul, div]
+    assert expression == expected_mul_expression

@@ -233,13 +233,16 @@ class MulExpression():
                 self.position == other.position)
 
 class DivExpression(ArthExpression):
-    def __init__(self, position, node):
-        super().__init__(position, node)
+    def __init__(self, position, left, right):
+        self.position = position
+        self.left = left
+        self.right = right
     
     def __eq__(self, other):
         if not isinstance(other, DivExpression):
             return False
-        return (self.node == other.node and 
+        return (self.left == other.left and 
+                self.right == other.right and
                 self.position == other.position)
 
 class BinaryOperation(Node):

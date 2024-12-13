@@ -358,9 +358,13 @@ class Parser:
         if not (unary_expr := self.parse_unary_expression()):
             return None
         expressions = []
+        next_expr = None
         while creator := self.MUL_OPERATORS.get(self.current_token.type):
             self.consume_token()
+            if next_expr:
+                unary_expr = next_expr
             if next_expr := self.parse_unary_expression():
+                a = creator(self.current_token.position, unary_expr, next_expr)
                 expressions.append(creator(self.current_token.position, unary_expr, next_expr))
             else:
                 raise InvalidArithmeticExpression(self.current_token)
