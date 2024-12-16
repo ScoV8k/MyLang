@@ -40,6 +40,8 @@ class Parser:
 
     def _get_next_token(self):
         self.current_token = self.lexer.get_next_token()
+        while self.current_token.type == TokenType.COMMENT:
+            self.current_token = self.lexer.get_next_token()
 
     def raise_exception(self):
         raise SyntaxError()
@@ -52,10 +54,9 @@ class Parser:
 
     def consume_token(self):
         self.current_token = self.lexer.get_next_token()
-        if self.current_token.type == TokenType.COMMENT:
-            self.consume_token()
+
     
-    def check_token_type(self, type) -> bool:
+    def check_token_type(self, type):
         if isinstance(type, TokenType):
             type = {type}
         return self.current_token.type in type
@@ -73,13 +74,9 @@ class Parser:
         token = self.current_token
         self.consume_token()
         return token
-    
 
-    def parse(self):
-        return self._parse_expression()
     
     def parse_program(self):
-        # functions = self.parse_function_definition()
         position = self.current_token.position
         functions = []
 
@@ -90,24 +87,22 @@ class Parser:
             self.error_manager.add_parser_error(error)
         return Program(position, functions)
     
-        # function_definition = "def", function_name, "(", parameters , ")" , statements; 
+    # function_def ::= func_type, identifier, "(", [ parameters ], ")", block ;
     def parse_function_definition(self) -> Optional[FunctionDefintion]:
-        if self.current_token.type not in [TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.DICT, TokenType.BOOL, TokenType.VOID]:
+        if self.current_token.type not in [TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.DICT, TokenType.BOOL, TokenType.VOID, TokenType.VARIANT]:
             return None
         position = self.current_token.position
         type = self.current_token.type
-        # self.lexer.get_next_token()
         self.consume_token()
         if self.current_token.type != TokenType.IDENTIFIER:
-            self.error_manager.add_parser_error(BuildingFunctionError(position, self.current_token))
             raise BuildingFunctionError(position, self.current_token)
         name = self.current_token.value
-        # self.lexer.get_next_token()
         self.consume_token()
         self.must_be(TokenType.LPAREN)
         params = self.parse_parameters()
         self.must_be(TokenType.RPAREN)
-        block_statements = self.parse_block()
+        if not( block_statements := self.parse_block()):
+            raise BuildingFunctionError(position, self.current_token) # DODAC ERROR
         return FunctionDefintion(position, type, name, params, block_statements)
 
 
@@ -144,9 +139,7 @@ class Parser:
             return None
         if self.try_consume(TokenType.ASSIGN):
             if not (expression := self.parse_or_expression()):
-                error = NoIfCondition(self.current_token)
-                self.error_manager.add_parser_error(error)
-                raise NoIfCondition(self.current_token)
+                raise NoIfCondition(self.current_token) #TODO
         self.must_be(TokenType.SEMICOLON)
         return Assignment(position, obj_access, expression)
 
@@ -154,16 +147,15 @@ class Parser:
     # assignment ::= obj_access, [ "=", expression ], ";" ;
     def parse_assignment(self):
         position = self.current_token.position
-        if (obj_access := self.parse_object_access()) == None:
+        if (statement := self.parse_object_access()) == None:
             return None
         expression = None
         if self.try_consume(TokenType.ASSIGN):
             if not (expression := self.parse_or_expression()):
-                error = NoIfCondition(self.current_token)
-                self.error_manager.add_parser_error(error)
-                raise NoIfCondition(self.current_token)
+                raise NoIfCondition(self.current_token) #TODO
+            statement = Assignment(position, statement, expression)
         self.must_be(TokenType.SEMICOLON)
-        return Assignment(position, obj_access, expression)
+        return statement
     
 
     # type_match ::= "match", expression, [ "as", identifier ], "{", { match_case }, "}" ; 
@@ -172,20 +164,16 @@ class Parser:
         if not self.try_consume(TokenType.MATCH):
             return None
         if not (expression := self.parse_or_expression()):
-                error = NoTypeMatchExpressionError(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise NoTypeMatchExpressionError(self.current_token)
         if self.try_consume(TokenType.AS):
-            if not (identifier := self.parse_identifier()):
-                error = NoIdentifierAfterAs(self.current_token)
-                self.error_manager.add_parser_error(error)
+            if not (identifier := self.try_consume(TokenType.IDENTIFIER)):
                 raise NoIdentifierAfterAs(self.current_token)
         self.must_be(TokenType.LBRACE)
         cases = []
         while match_case := self.parse_match_case():
             cases.append(match_case)
         self.must_be(TokenType.RBRACE)
-        return TypeMatch(position, expression, cases, identifier=None)
+        return TypeMatch(position, expression, cases, identifier.value)
 
     # match_case ::= type, "=>", block | "null", "=>", block | "_", "=>", block ;
     def parse_match_case(self):
@@ -199,8 +187,6 @@ class Parser:
                 return None
         self.must_be(TokenType.ARROW)
         if not (block := self.parse_block()):
-            error = NoBlockInMatchCaseError(position, self.current_token)
-            self.error_manager.add_parser_error(error)
             raise NoBlockInMatchCaseError(position, self.current_token)
         return MatchCase(position, type, block)
             
@@ -213,18 +199,12 @@ class Parser:
         position = self.current_token.position
         self.must_be(TokenType.LPAREN)
         if not (condition := self.parse_or_expression()):
-            error = NoIfCondition(self.current_token)
-            self.error_manager.add_parser_error(error)
             raise NoIfCondition(self.current_token)
         self.must_be(TokenType.RPAREN)
         if not (if_block := self.parse_block()):
-            error = ExpectedIfBlockOfStatements(self.current_token)
-            self.error_manager.add_parser_error(error)
             ExpectedIfBlockOfStatements(self.current_token)
         if self.try_consume(TokenType.ELSE):
             if not (else_block := self.parse_block()):
-                error = ExpectedElseBlockOfStatements(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise ExpectedElseBlockOfStatements(self.current_token)
         return IfStatement(position, condition, if_block, else_block)
     
@@ -234,18 +214,14 @@ class Parser:
             position = self.current_token.position
             self.must_be(TokenType.LPAREN)
             if not (while_condition := self.parse_or_expression()):
-                error = InvalidWhileCondition(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidWhileCondition(self.current_token)
             self.must_be(TokenType.RPAREN)
             if not (while_block := self.parse_block()):
-                error = ExpectedWhileBlockOfStatements(self.current_token)
-                self.error_manager.add_parser_error(error)
-                ExpectedWhileBlockOfStatements(self.current_token)
+                raise ExpectedWhileBlockOfStatements(self.current_token)
             return WhileStatement(position, while_condition, while_block)
         return None
     
-    # for_each_loop ::= "for", "each", "(", identifier, ",", identifier, ")", "in", identifier, block ;
+    # for_each_loop ::= "for", "each", "(", identifier, ",", identifier, ")", "in", expression, block ;
     def parse_for_each_loop(self):
         if self.try_consume(TokenType.FOR):
             position = self._consume.position
@@ -258,9 +234,7 @@ class Parser:
             self.must_be(TokenType.IN)
             struct = self.must_be(TokenType.IDENTIFIER).value
             if not (for_each_block := self.parse_block()):
-                error = ExpectedForEachBlockOfStatements(self.current_token)
-                self.error_manager.add_parser_error(error)
-                ExpectedForEachBlockOfStatements(self.current_token)
+                raise ExpectedForEachBlockOfStatements(self.current_token)
             return ForEachStatement(position, key, value, struct, for_each_block)
         return None
     
@@ -285,8 +259,6 @@ class Parser:
         while self.try_consume(TokenType.DOT):
             function_call = self.parse_identifier_or_function_call()
             if function_call is None:
-                error = UnexpectedToken(self.current_token.position, self.current_token.value)
-                self.error_manager.add_parser_error(error)
                 raise UnexpectedToken(self.current_token.position, self.current_token.value)
             function_calls.append(function_call)
 
@@ -299,15 +271,14 @@ class Parser:
     # identifier_or_function_call ::= identifier, [ "(", [ arguments ], ")" ] ; 
     def parse_identifier_or_function_call(self):
         position = self.current_token.position
-        if (identifier := self.parse_identifier()) == None:
+        if (identifier := self.try_consume(TokenType.IDENTIFIER)) == None:
             return None
-
         if not self.try_consume(TokenType.LPAREN):
-            return identifier
+            return Identifier(identifier.position, identifier.value)
         else:
             arguments = self.parse_arguments()
             self.must_be(TokenType.RPAREN)
-            return FunctionCall(position, identifier, arguments)
+            return FunctionCall(position, identifier.value, arguments)
     
     # arguments ::= expression, { ",", expression } ;
     def parse_arguments(self):
@@ -319,8 +290,6 @@ class Parser:
 
         while self.try_consume(TokenType.COMMA):
             if not (argument := self.parse_expression()):
-                error = NoArgumentExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise NoArgumentExpression(self.current_token)
             argumentsList.append(argument)
         return argumentsList
@@ -330,13 +299,14 @@ class Parser:
         position = self.current_token.position
         if not (left := self.parse_and_expression()):
             return None
+        expressions = [left]
         while self.try_consume(TokenType.LOGICAL_OR):
             if not (right := self.parse_and_expression()):
-                error = InvalidOrExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidOrExpression(self.current_token)
-            left = OrExpression(position, left, right)
-        return left
+            expressions.append(right)
+        if len(expressions) == 1:
+            return left
+        return OrExpression(position, expressions)
 
      
     # and_expression ::= equality_expression, { "&&", equality_expression } ;
@@ -347,10 +317,7 @@ class Parser:
         expressions = [left]
         while self.try_consume(TokenType.LOGICAL_AND):
             if not (right := self.parse_equality_expression()):
-                error = InvalidAndExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidAndExpression(self.current_token)
-            # left = AndExpression(position, left, right)
             expressions.append(right)
         if len(expressions) == 1:
             return left
@@ -364,8 +331,6 @@ class Parser:
         if expression_type := self.LOGIC_OPERATIONS_MAPPING.get(self.current_token.type):
             self.consume_token()
             if not (second_rel_expr := self.parse_relational_expression()):
-                error = InvalidEqualityExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidEqualityExpression(self.current_token)
             return expression_type(position, rel_expr, second_rel_expr)
         return rel_expr
@@ -378,8 +343,6 @@ class Parser:
         if creator := self.LOGIC_OPERATIONS_MAPPING.get(self.current_token.type):
             self.consume_token()
             if not (right := self.parse_add_expression()):
-                error = InvalidRelationalExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidRelationalExpression(self.current_token)
             return creator(position, left, right)
         return left
@@ -392,30 +355,12 @@ class Parser:
         while creator := self.ARTH_OPERATORS.get(self.current_token.type):
             self.consume_token()
             if not (right := self.parse_multiplication_expression()):
-                error = InvalidAddExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidAddExpression(self.current_token)
             left = creator(position, left, right)                   
         return left
     
-    # mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
-    # def parse_multiplication_expression(self):
-    #     position = self.current_token.position
-    #     if not (unary_expr := self.parse_unary_expression()):
-    #         return None
-    #     expressions = [unary_expr]
-    #     while expression_type := self.MUL_OPERATORS.get(self.current_token.type):
-    #         type = expression_type
-    #         self.consume_token()
-    #         if not (expr := self.parse_unary_expression()):
-    #             error = InvalidArithmeticExpression(self.current_token)
-    #             self.error_manager.add_parser_error(error)
-    #             raise InvalidArithmeticExpression(self.current_token)
-    #         expressions.append(expr)
-    #     if len(expressions) == 1:
-    #         return unary_expr
-    #     return type(position, expressions)
-    
+
+
     # mul_expression ::= unary_expression, { "*" | "/", unary_expression } ;
     def parse_multiplication_expression(self):
         position = self.current_token.position
@@ -424,8 +369,6 @@ class Parser:
         while creator := self.MUL_OPERATORS.get(self.current_token.type):
             self.consume_token()
             if not (right := self.parse_unary_expression()):
-                error = InvalidMultiplicationExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidMultiplicationExpression(self.current_token)
             left = creator(position, left, right)                   
         return left
@@ -438,8 +381,6 @@ class Parser:
         if self.current_token.value in ["-", "not", "!"]:
             self.consume_token()
             if not (expr := self.parse_type_expression()):
-                error = InvalidArithmeticExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidArithmeticExpression(self.current_token)
             return Negation(position, expr)
         if not (type_expr := self.parse_type_expression()):
@@ -454,52 +395,36 @@ class Parser:
             return None
         if self.try_consume(TokenType.IS):
             if not (type := self.parse_type()):
-                error = InvalidArithmeticExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidArithmeticExpression(self.current_token)   
             return TypeExpression(position, factor, type)
         return factor
         
     # factor ::= literal | "(", expression, ")", | obj_access ;
-    def parse_factor(self):
+    def parse_factor(self): # zrobić analogicznie jak parse_literal
         if obj_access := self.parse_object_access():
             return obj_access
         if self.try_consume(TokenType.LPAREN):
             if not (expression := self.parse_or_expression()):
-                error = InvalidExpression(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise InvalidExpression(self.current_token) 
             self.must_be(TokenType.RPAREN)
             return expression
         if literal := self.parse_literal():
             return literal
         return None
-    
-    # expression ::= or_expression ;
-    # def parse_expression(self):
-    #     if self.try_consume(TokenType.LPAREN):
-    #         if not (expression := self.parse_or_expression()):
-    #             error = InvalidExpression(self.current_token)
-    #             self.error_manager.add_parser_error(error)
-    #             raise InvalidExpression(self.current_token) 
-    #         self.must_be(TokenType.RPAREN)
-    #         return expression
-    #     return None
 
 
     # literal ::= integer | float | bool | string | dictionary;
-    def parse_literal(self):
+    def parse_literal(self): 
         variable_value = \
             self.parse_bool()    \
             or self.parse_integer()  \
             or self.parse_float()   \
             or self.parse_string()  \
-            # or self.parse_dictionary()
+            or self.parse_dictionary()
         if variable_value:
             return variable_value
         return None
     
-    # LiteralBool i value
     def parse_bool(self):
         position = self.current_token.position
         if (token := self.try_consume(self.BOOL)) == None:
@@ -532,14 +457,12 @@ class Parser:
         if self.try_consume(TokenType.LBRACE) == None:
             return None
         if not (dictionary_entries := self.parse_dictionary_entries()):
-                error = DictionaryEntriesError(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise DictionaryEntriesError(self.current_token) 
         self.must_be(TokenType.RBRACE)
         return Dictionary(position, dictionary_entries)
 
 
-    # dictionary ::= "{", [ dict_entries ], "}" ;
+    # dict_entries ::= expression, ":", expression, { ",", expression, ":", expression } ;
     def parse_dictionary_entries(self):
         position = self.current_token.position
         if not (entry := self.parse_dictionary_entry()):
@@ -547,14 +470,10 @@ class Parser:
         entries = [entry]
         while self.try_consume(TokenType.COMMA):
             if not (entry := self.parse_dictionary_entry()):
-                error = DictionaryEntriesError(self.current_token)
-                self.error_manager.add_parser_error(error)
                 raise DictionaryEntriesError(self.current_token) 
             entries.append(entry)
         return entries
             
-
-
     
     def parse_dictionary_entry(self):
         position = self.current_token.position
@@ -562,26 +481,11 @@ class Parser:
             return None
         self.must_be(TokenType.SEMICOLON)
         if not (expression2 := self.parse_or_expression()):
-            error = DictionaryEntryError(self.current_token)
-            self.error_manager.add_parser_error(error)
             raise DictionaryEntryError(self.current_token)
         return  DictionaryEntry(position, expression, expression2)
         
 
-
-
-        # if self.try_consume(TokenType.LBRACE) == None:
-        #     return None
-        # if not (dictionary_entries := self.parse_dictionary_entries()):
-        #         error = DictionaryEntriesError(self.current_token)
-        #         self.error_manager.add_parser_error(error)
-        #         raise DictionaryEntriesError(self.current_token) 
-        # self.must_be(TokenType.RBRACE)
-        # return Dictionary(position, dictionary_entries)
-
-
-
-# parameters ::= parameter, { ",", parameter } ;
+    # parameters ::= parameter, { ",", parameter } ;
     def parse_parameters(self):
         params = []
         if (param := self.parse_parameter()) == None:
@@ -589,9 +493,8 @@ class Parser:
         params.append(param)
         while self.try_consume(TokenType.COMMA):
             if not (param := self.parse_parameter()):
-                self.error_manager.add_parser_error(InvalidParameterError(self.current_token.position))
                 raise InvalidParameterError(self.current_token)
-            elif param in params:
+            elif param in params: # porównywanie po samej nazwie parametru param.name
                 raise SameParameterError(self.current_token.position, param)
             else:
                 params.append(param)
@@ -599,8 +502,6 @@ class Parser:
 
 # parameter ::= type_or_variant, identifier ;
     def parse_parameter(self):
-        # if self.current_token.type not in [TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.DICT, TokenType.BOOL, TokenType.VARIANT]:
-        #     return None
         position = self.current_token.position
         if (token_type := self.parse_type_or_varinat()) == None:
             return None
@@ -609,7 +510,7 @@ class Parser:
         return None
     
 
-    def parse_type_or_varinat(self):
+    def parse_type_or_varinat(self): # Zrobić matcha z mapowaniem na typy
         token = self.current_token
         if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VARIANT]:
             self.consume_token()
@@ -635,17 +536,3 @@ class Parser:
         else:
             return None
     
-    def parse_identifier(self):
-            if not (token := self.try_consume(TokenType.IDENTIFIER)):
-                return None
-            else:
-                return Identifier(token.position, token.value)
-
-
-    def _try_parse_type(self) -> Optional[str]:
-        lexerToken = self.__get_current_token()
-        if lexerToken.value in ["int", "float", "frc", "string"]:
-            self.__get_next_token()
-            return lexerToken.value
-        else:
-            return None

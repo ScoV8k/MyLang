@@ -34,18 +34,6 @@ def test_type_or_variant():
     assert type == expected_type
     assert type2 == expected_variant
 
-def test_identifier():
-    source_code = "witam"
-    source = io.StringIO(source_code)
-    error_manager = ErrorManager()
-    lexer = Lexer(source, error_manager)
-    parser = Parser(lexer, error_manager)
-
-    type = parser.parse_identifier()
-    expected_type = Identifier((1,1), 'witam')
-    assert type == expected_type
-
-
 
 def test_parameter2():
     source_code = "int elo"
@@ -261,7 +249,7 @@ def test_type_match():
 
 
 
-def test_type_match1():
+def test_block():
     source_code = "{abc();}"
     source = io.StringIO(source_code)
     error_manager = ErrorManager()
@@ -269,13 +257,24 @@ def test_type_match1():
     parser = Parser(lexer, error_manager)
 
     expression = parser.parse_block()
-    a = Identifier((1, 7), 'a')
-    name = Identifier((1, 2), 'abc')
-    fun_call = FunctionCall((1, 2), name, None)
-    assignment = Assignment((1, 2), fun_call, None)
-    l = [assignment]
-    block = Block((1, 1), l)
-    match_case = MatchCase((1, 10), 'null', block)
-    cases = [match_case]
-    expected = TypeMatch((1, 1), a, cases, None)
+    fun_call = FunctionCall((1, 2), 'abc', None)
+    block = Block((1, 1), [fun_call])
     assert expression == block
+
+
+# def test_function_def():
+#     source_code = "int func() {a = 2;}"
+#     source = io.StringIO(source_code)
+#     error_manager = ErrorManager()
+#     lexer = Lexer(source, error_manager)
+#     parser = Parser(lexer, error_manager)
+
+#     expression = parser.parse_function_definition()
+#     a = Identifier((1, 13), 'a')
+#     int = IntegerValue((1, 17), 2)
+#     assignment = Assignment((1, 13), a, int)
+#     l = [assignment]
+#     block = Block((1, 12), l)
+#     match_case = MatchCase((1, 10), 'null', block)
+#     expected = FunctionDefintion((1, 1), intType, 'func', [], block)
+#     assert expression == expected

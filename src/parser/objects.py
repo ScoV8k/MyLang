@@ -7,9 +7,6 @@ class Program(Node):
         super().__init__(position)
         self.functions = functions
     
-    def __str__(self):
-        function_definitions = '\n'.join(str(self.functions[function]) for function in self.functions)
-        return f"Program na pozycji {self.position} z funkcjami:\n{function_definitions}"
 
 class FunctionDefintion(Node):
     def __init__(self, position, type, name, parameters, statements) -> None:
@@ -18,11 +15,6 @@ class FunctionDefintion(Node):
         self.parameters = parameters
         self.statements = statements
         self.type = type
-    
-    def __str__(self):
-        parameters_str = ", ".join(str(param) for param in self.parameters)
-        statements_str = "\n    ".join(str(stmt) for stmt in self.statements)
-        return f'Function "{self.name}":\n  Parameters: {parameters_str}\n  Statements:\n    {statements_str}'
     
     def __eq__(self, other):
         if not isinstance(other, FunctionDefintion):
@@ -38,9 +30,6 @@ class FunctionArguments(Node):
         super().__init__(position)
         self.arguments = arguments
 
-    def __str__(self):
-        args = ", ".join(str(object) for object in self.arguments)
-        return f'FunctionArguments: {args}'
 
 class Identifier(Node):
     def __init__(self, position, name) -> None:
@@ -59,9 +48,6 @@ class Parameter(Node):
         super().__init__(position)
         self.name = name
         self.type = type
-    
-    def __str__(self):
-        return f'Parameter "{self.name}"'
     
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -88,10 +74,6 @@ class IfStatement(Node):
         self.statements = statements
         self.else_statement = else_statement
 
-    def __str__(self):
-        if_statements_str = "\n     ".join(str(stmt) for stmt in self.statements)
-        else_statement_str = "\n    ".join(str(stmt) for stmt in self.else_statement)
-        return f'If {self.condition}:\n  Then:\n    {if_statements_str}\n  Else:\n    {else_statement_str}'
     
     def __eq__(self, other):
         if not isinstance(other, IfStatement):
