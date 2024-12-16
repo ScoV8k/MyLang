@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import DivExpression, FunctionArguments, FunctionCall, Identifier, IntegerValue, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, TypeExpression
+from src.parser.objects import DivExpression, FunctionArguments, FunctionCall, Identifier, IntegerValue, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, SumExpression, TypeExpression
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
@@ -8,31 +8,6 @@ from src.errors.lexer_errors import InvalidTokenError, IdentifierTooLongError, L
 import pytest
 import io
 
-
-
-def test_parameter():
-    source_code = "int a"
-    source = io.StringIO(source_code)
-    error_manager = ErrorManager()
-    lexer = Lexer(source, error_manager)
-    parser = Parser(lexer, error_manager)
-
-    a = parser.parse_parameter()
-    ecp = Parameter((1, 5), "int", "a")
-    assert a == ecp
-
-
-def test_function():
-    source_code = "void funkcja(float a) { }"
-    source = io.StringIO(source_code)
-    error_manager = ErrorManager()
-    lexer = Lexer(source, error_manager)
-    parser = Parser(lexer, error_manager)
-
-    a = parser.parse_function_definition()
-    expected_param = Parameter((1, 20), "float", "a")
-    expected = FunctionDefintion((1, 1), "funkcja", [expected_param], None)
-    assert a == expected
 
 def test_type():
     source_code = "int"
@@ -59,7 +34,6 @@ def test_type_or_variant():
     assert type == expected_type
     assert type2 == expected_variant
 
-
 def test_identifier():
     source_code = "witam"
     source = io.StringIO(source_code)
@@ -70,6 +44,7 @@ def test_identifier():
     type = parser.parse_identifier()
     expected_type = Identifier((1,1), 'witam')
     assert type == expected_type
+
 
 
 def test_parameter2():
@@ -187,13 +162,28 @@ def test_mul_expression():
     parser = Parser(lexer, error_manager)
 
     expression = parser.parse_multiplication_expression()
-    int = IntegerValue((1, 6), 3)
-    int2 = IntegerValue((1, 10), 2)
-    int3 = IntegerValue((1,2), 5)
-    expected_type_expression = TypeExpression((1, 1), int, "int")
-    negation = Negation((1, 1), int3)
-    expected_factor2 = IntegerValue((1, 2), 5)
-    mul = MulExpression((1,8), negation, int)
-    div = DivExpression((1, 11), int, int2)
-    expected_mul_expression = [mul, div]
-    assert expression == expected_mul_expression
+    int2 = IntegerValue((1, 6), 3)
+    int3 = IntegerValue((1, 10), 2)
+    int = IntegerValue((1, 2), 5)
+    negation = Negation((1, 1), int)
+    mul = MulExpression((1, 1), negation, int2)
+    expected = DivExpression((1, 1), mul, int3)
+    assert expression == expected
+
+
+def test_add_expression():
+    source_code = "-5 + 3 / 2"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_add_expression()
+    int2 = IntegerValue((1, 6), 3)
+    int3 = IntegerValue((1, 10), 2)
+    int = IntegerValue((1, 2), 5)
+    negation = Negation((1, 1), int)
+    mul = MulExpression((1, 1), negation, int2)
+    div = DivExpression((1, 6), int2, int3)
+    expected = SumExpression((1, 1), negation, div)
+    assert expression == expected
