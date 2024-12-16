@@ -156,6 +156,7 @@ class Parser:
         position = self.current_token.position
         if (obj_access := self.parse_object_access()) == None:
             return None
+        expression = None
         if self.try_consume(TokenType.ASSIGN):
             if not (expression := self.parse_or_expression()):
                 error = NoIfCondition(self.current_token)
@@ -182,7 +183,7 @@ class Parser:
         self.must_be(TokenType.LBRACE)
         cases = []
         while match_case := self.parse_match_case():
-            cases.appent(match_case)
+            cases.append(match_case)
         self.must_be(TokenType.RBRACE)
         return TypeMatch(position, expression, cases, identifier=None)
 
@@ -343,13 +344,17 @@ class Parser:
         position = self.current_token.position
         if not (left := self.parse_equality_expression()):
             return None
+        expressions = [left]
         while self.try_consume(TokenType.LOGICAL_AND):
             if not (right := self.parse_equality_expression()):
                 error = InvalidAndExpression(self.current_token)
                 self.error_manager.add_parser_error(error)
                 raise InvalidAndExpression(self.current_token)
-            left = AndExpression(position, left, right)
-        return left
+            # left = AndExpression(position, left, right)
+            expressions.append(right)
+        if len(expressions) == 1:
+            return left
+        return AndExpression(position, expressions)
     
     # equality_expression ::= relational_expression, [ "==" | "!=", relational_expression ] ;
     def parse_equality_expression(self):

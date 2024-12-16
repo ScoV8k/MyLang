@@ -383,7 +383,7 @@ class DictionaryEntry(Node):
                 self.position == other.position)
 
 class Assignment(Node):
-    def __init__(self, position, target, value):
+    def __init__(self, position, target, value=None):
         super().__init__(position)
         self.target = target
         self.value = value
@@ -455,3 +455,9 @@ class Block(Node):
     def __init__(self, position, statements) -> None:
         super().__init__(position)
         self.statements = statements
+
+    def __eq__(self, other):
+        if not isinstance(other, Block):
+            return False
+        return (self.statements == other.statements and 
+                self.position == other.position)

@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import DivExpression, FunctionArguments, FunctionCall, Identifier, IntegerValue, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, SumExpression, TypeExpression
+from src.parser.objects import AndExpression, Assignment, Block, DivExpression, EqualityOperation, FunctionArguments, FunctionCall, Identifier, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, SumExpression, TypeExpression, TypeMatch
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
@@ -187,3 +187,95 @@ def test_add_expression():
     div = DivExpression((1, 6), int2, int3)
     expected = SumExpression((1, 1), negation, div)
     assert expression == expected
+
+
+def test_relational_expression():
+    source_code = "-5 + 3 < 2"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_relational_expression()
+    int2 = IntegerValue((1, 6), 3)
+    int3 = IntegerValue((1, 10), 2)
+    int = IntegerValue((1, 2), 5)
+    negation = Negation((1, 1), int)
+    sum = SumExpression((1, 1), negation, int2)
+    expected = LessOperation((1, 1), sum, int3)
+    assert expression == expected
+
+
+def test_equality_expression():
+    source_code = "-5 + 3 == 2"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_equality_expression()
+    int2 = IntegerValue((1, 6), 3)
+    int3 = IntegerValue((1, 11), 2)
+    int = IntegerValue((1, 2), 5)
+    negation = Negation((1, 1), int)
+    sum = SumExpression((1, 1), negation, int2)
+    expected = EqualityOperation((1, 1), sum, int3)
+    assert expression == expected
+
+def test_and_expression():
+    source_code = "a == 2 && b == 3"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_and_expression()
+    a = Identifier((1, 1), 'a')
+    int1 = IntegerValue((1, 6), 2)
+    b = Identifier((1, 11), 'b')
+    int2 = IntegerValue((1, 16), 3)
+    eq1 = EqualityOperation((1, 1), a, int1)
+    eq2 = EqualityOperation((1, 11), b, int2)
+    expected_expressions = [eq1, eq2]
+    expected = AndExpression((1, 1), expected_expressions)
+    assert expression == expected
+
+
+def test_type_match():
+    source_code = "match a {null => {abc();}}"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_type_match()
+    a = Identifier((1, 7), 'a')
+    name = Identifier((1, 19), 'abc')
+    fun_call = FunctionCall((1, 19), name, None)
+    assignment = Assignment((1,19), fun_call, None)
+    block = Block((1, 18), [assignment])
+    match_case = MatchCase((1, 10), 'null', block)
+    cases = [match_case]
+    expected = TypeMatch((1, 1), a, cases, None)
+    assert expression == expected
+
+
+
+def test_type_match1():
+    source_code = "{abc();}"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    expression = parser.parse_block()
+    a = Identifier((1, 7), 'a')
+    name = Identifier((1, 2), 'abc')
+    fun_call = FunctionCall((1, 2), name, None)
+    assignment = Assignment((1, 2), fun_call, None)
+    l = [assignment]
+    block = Block((1, 1), l)
+    match_case = MatchCase((1, 10), 'null', block)
+    cases = [match_case]
+    expected = TypeMatch((1, 1), a, cases, None)
+    assert expression == block
