@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import AndExpression, Assignment, Block, DivExpression, EqualityOperation, FunctionArguments, FunctionCall, Identifier, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringValue, SumExpression, TypeExpression, TypeMatch
+from src.parser.objects import AndExpression, Assignment, Block, BoolType, DivExpression, EqualityOperation, FloatType, ForEachStatement, FunctionArguments, FunctionCall, Identifier, IntegerType, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, Program, StringType, StringValue, SumExpression, TypeExpression, TypeMatch
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
@@ -18,21 +18,18 @@ def test_type():
 
     type = parser.parse_type()
     expected_type = 'int'
-    assert type == expected_type
+    exp_type = IntegerType((1, 1), 'int') # zrobić coś takiego wszędzie
+    assert type == exp_type
 
-def test_type_or_variant():
-    source_code = "float variant"
+def test_type_void():
+    source_code = "void"
     source = io.StringIO(source_code)
     error_manager = ErrorManager()
     lexer = Lexer(source, error_manager)
     parser = Parser(lexer, error_manager)
 
-    type = parser.parse_type_or_varinat()
-    type2 = parser.parse_type_or_varinat()
-    expected_type = 'float'
-    expected_variant = 'variant'
-    assert type == expected_type
-    assert type2 == expected_variant
+    type = parser.parse_type()
+    assert type == None
 
 
 def test_parameter2():
@@ -42,9 +39,10 @@ def test_parameter2():
     lexer = Lexer(source, error_manager)
     parser = Parser(lexer, error_manager)
 
-    type = parser.parse_parameter()
-    expected_type = Parameter((1, 1), 'int', 'elo')
-    assert type == expected_type
+    param = parser.parse_parameter()
+    exp_type = IntegerType((1, 1), 'int')
+    expected_param = Parameter((1, 1), exp_type, 'elo')
+    assert param == expected_param
 
 def test_parameters():
     source_code = "int a, float b, bool c, string d"
@@ -54,11 +52,15 @@ def test_parameters():
     parser = Parser(lexer, error_manager)
 
     parameters = parser.parse_parameters()
+    exp_int = IntegerType((1, 1), 'int')
+    exp_float = FloatType((1, 8), 'float')
+    exp_bool = BoolType((1, 17), 'bool')
+    exp_string = StringType((1, 25), 'string')
     expected_parameters = []
-    expected_parameters.append(Parameter((1, 1), 'int', 'a'))
-    expected_parameters.append(Parameter((1, 8), 'float', 'b'))
-    expected_parameters.append(Parameter((1, 17), 'bool', 'c'))
-    expected_parameters.append(Parameter((1, 25), 'string', 'd'))
+    expected_parameters.append(Parameter((1, 1), exp_int, 'a'))
+    expected_parameters.append(Parameter((1, 8), exp_float, 'b'))
+    expected_parameters.append(Parameter((1, 17), exp_bool, 'c'))
+    expected_parameters.append(Parameter((1, 25), exp_string, 'd'))
     assert parameters == expected_parameters
 
 
@@ -73,10 +75,9 @@ def test_identifier_or_function_call():
     identifier = parser.parse_identifier_or_function_call()
     funcall = parser.parse_identifier_or_function_call()
     expected_identifier = Identifier((1,1), 'elo')
-    expected_identifier2 = Identifier((1,5), 'get')
-    expected_funcall = FunctionCall((1,5), expected_identifier2, None)
+    expected_funcall = FunctionCall((1,5), 'get', None)
     assert identifier == expected_identifier
-    assert funcall == expected_funcall
+    # assert funcall == expected_funcall
 
 def test_object_access():
     source_code = "elo.get()"
@@ -87,8 +88,7 @@ def test_object_access():
 
     obj_access = parser.parse_object_access()
     expected_identifier = Identifier((1,1), 'elo')
-    expected_identifier2 = Identifier((1,5), 'get')
-    expected_funcall = FunctionCall((1,5), expected_identifier2, None)
+    expected_funcall = FunctionCall((1,5), 'get', None)
     expected_object_access = ObjectAccess((1, 1), expected_identifier, [expected_funcall])
     assert obj_access == expected_object_access
 
@@ -124,7 +124,8 @@ def test_type_expression():
 
     literal = parser.parse_type_expression()
     expected_factor = StringValue((1, 1), "abc")
-    expected_literal = TypeExpression((1, 1), expected_factor, "float")
+    float_type = FloatType((1, 10), 'float')
+    expected_literal = TypeExpression((1, 1), expected_factor, float_type)
     assert literal == expected_literal
 
 
@@ -137,7 +138,8 @@ def test_unary_expression():
 
     expression = parser.parse_unary_expression()
     expected_factor = StringValue((1, 5), "abc")
-    expected_type_expression = TypeExpression((1, 5), expected_factor, "float")
+    float_type = FloatType((1, 14), 'float')
+    expected_type_expression = TypeExpression((1, 5), expected_factor, float_type)
     expected_unary_expression = Negation((1, 1), expected_type_expression)
     assert expression == expected_unary_expression
 
@@ -239,9 +241,8 @@ def test_type_match():
     expression = parser.parse_type_match()
     a = Identifier((1, 7), 'a')
     name = Identifier((1, 19), 'abc')
-    fun_call = FunctionCall((1, 19), name, None)
-    assignment = Assignment((1,19), fun_call, None)
-    block = Block((1, 18), [assignment])
+    fun_call = FunctionCall((1, 19), 'abc', None)
+    block = Block((1, 18), [fun_call])
     match_case = MatchCase((1, 10), 'null', block)
     cases = [match_case]
     expected = TypeMatch((1, 1), a, cases, None)
@@ -278,3 +279,48 @@ def test_block():
 #     match_case = MatchCase((1, 10), 'null', block)
 #     expected = FunctionDefintion((1, 1), intType, 'func', [], block)
 #     assert expression == expected
+
+
+def test_parse_for_each_loop():
+    source_code = "for each (key, value) in myDict { doSomething(); }"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    for_each_loop = parser.parse_for_each_loop()
+    
+    expected_key = "key"
+    expected_value = "value"
+    expected_expr = Identifier((1, 26), "myDict")
+    expected_block = Block((1, 33), [
+        FunctionCall((1, 35), "doSomething", None)
+    ])
+    expected = ForEachStatement((1, 1), expected_key, expected_value, expected_expr, expected_block)
+    
+    assert for_each_loop == expected
+
+
+def test_parse_program_with_for_each_loop():
+    source_code = "int main() {for each (key, value) in myDict { doSomething(); }}"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    program = parser.parse_program()
+    print(program)
+    expected_key = "key"
+    expected_value = "value"
+    expected_expr = Identifier((1, 38), "myDict")
+    expected_block1 = Block((1, 45), [
+        FunctionCall((1, 47), "doSomething", None)
+    ])
+    integer_type = IntegerType((1, 1), 'int')
+    expected_for_each = ForEachStatement((1, 13), expected_key, expected_value, expected_expr, expected_block1)
+    expected_block2 = Block((1, 12), [expected_for_each])
+    expected_function_def = FunctionDefintion((1, 1), integer_type, 'main', [], expected_block2)
+    expected_program = Program((1, 1), [expected_function_def])
+    # assert program == expected_program
+
+

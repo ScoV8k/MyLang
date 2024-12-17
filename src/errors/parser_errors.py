@@ -12,33 +12,58 @@ class ParserError(Exception):
 
 
 class UnexpectedToken(ParserError):
-    def __init__(self, position, value):
-        line, column = position
-        message = f"UnexpectedToken ({line}, {column}): Niespodziewany token: '{value}'."
+    def __init__(self, token):
+        line, column = token.position
+        message = f"UnexpectedToken ({line}, {column}): Niespodziewany token: '{token.value}'."
         super().__init__(message)
+
 
 class BuildingFunctionError(ParserError):
-    def __init__(self, position, value):
-        line, column = position
-        message = f"SyntaxError ({line}, {column}): Błąd podczas budowania definicji funkcji '{value}'."
+    def __init__(self, token):
+        line, column = token.position
+        message = f"SyntaxError ({line}, {column}): Błąd podczas budowania definicji funkcji '{token.value}'."
         super().__init__(message)
 
+
 class InvalidParameterError(ParserError):
-    def __init__(self, position):
-        line, column = position
+    def __init__(self, token):
+        line, column = token.position
         message = f"InvalidParameterError ({line}, {column}): Nie podano prawidłowego parametru."
         super().__init__(message)
 
+
 class SameParameterError(ParserError):
-    def __init__(self, position, value):
-        line, column = position
-        message = f"SameParameterError ({line}, {column}): Podano 2 takie same parametry '{value}'."
+    def __init__(self, token):
+        line, column = token.position
+        message = f"SameParameterError ({line}, {column}): Podano 2 takie same parametry '{token.value}'."
         super().__init__(message)
 
+
 class EmptyBlockOfStatements(ParserError):
-    def __init__(self, position, value):
-        line, column = position
-        message = f"EmptyBlockOfStatements ({line}, {column}): Podano pusty blok. Wymagany statement: '{value}'."
+    def __init__(self, token):
+        line, column = token.position
+        message = f"EmptyBlockOfStatements ({line}, {column}): Podano pusty blok. Wymagany statement: '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidRelationalExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidRelationalExpression ({line}, {column}): Niepoprawne wyrażenie po operatorze relacyjnym: '{token.value}'."
+        super().__init__(message)
+
+
+class InvalidEqualityExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidEqualityExpression ({line}, {column}): Niepoprawne wyrażenie po operatorze porównania: '{token.value}'."
+        super().__init__(message)
+
+
+class NoForEachExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoForEachExpression ({line}, {column}): Brak wyrażenia w instrukcji 'for each': '{token.value}'."
         super().__init__(message)
 
 class NoIfCondition(ParserError):
@@ -172,7 +197,3 @@ class InvalidAddExpression(ParserError):
         line, column = token.position
         message = f"InvalidAddExpression: ({line}, {column}): Niepoprawne wyrażenie po operatorze dodawania/odejmowania: '{token.value}'."
         super().__init__(message)
-
-        InvalidRelationalExpression
-
-        InvalidEqualityExpression

@@ -24,6 +24,7 @@ function_def ::= func_type, identifier, "(", [ parameters ], ")", block ;
 parameters ::= parameter, { ",", parameter } ;
 parameter ::= type, identifier ;
 identifier_or_function_call ::= identifier, [ "(", [ arguments ], ")" ] ; 
+function_call ::= identifier, "(", [ arguments ], ")" ;
 arguments ::= expression, { ",", expression } ;
 
 type_match ::= "match", expression, [ "as", identifier ], "{", { match_case }, "}" ; 
@@ -46,16 +47,18 @@ factor ::= literal | "(", expression, ")", | obj_access ;
 obj_access ::= item, { ".", function_call } ;
 item ::= identifier_or_function_call ;
 
-func_type ::= type | "void" ;
+func_type ::= type | "void";
 type ::= "int" | "float" | "bool" | "string" | "dict" | "variant";
+
+dictionary ::= "{", [ dict_entries ], "}" ;
+dict_entries ::= expression, ":", expression, { ",", expression, ":", expression } ;
+
 
 literal ::= integer | float | bool | string | dictionary;
 float ::= integer, ".", digit, { digit } ;
 integer  ::= zero | (non_zero_digit, {digit}) ;
 bool ::= "true" | "false" ;
 string ::= '"', { any_character - '"' }, '"' ;
-dictionary ::= "{", [ dict_entries ], "}" ;
-dict_entries ::= expression, ":", expression, { ",", expression, ":", expression } ;
 
 identifier ::= letter, { letter | digit | "_" } ;
 

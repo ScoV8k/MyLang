@@ -1,6 +1,7 @@
+from bs4 import Doctype
 from src.lexer.tokens import TokenType, Symbols, Token
 from src.errors.parser_errors import DictionaryEntriesError, DictionaryEntryError, ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAddExpression, InvalidAndExpression, InvalidArithmeticExpression, InvalidExpression, InvalidLogicExpression, InvalidMultiplicationExpression, InvalidOrExpression, InvalidWhileCondition, NoArgumentExpression, NoBlockInMatchCaseError, NoIdentifierAfterAs, NoIfCondition, NoTypeMatchExpressionError, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements
-from src.parser.objects import AndExpression, Assignment, Block, BoolValue, Dictionary, DictionaryEntry, DivExpression, EqualityOperation, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, WhileStatement
+from src.parser.objects import AndExpression, Assignment, Block, BoolType, BoolValue, Dictionary, DictionaryEntry, DivExpression, EqualityOperation, FloatType, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringType, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, VariantType, VoidType, WhileStatement
 from typing import Optional
 import io
 
@@ -34,6 +35,16 @@ class Parser:
             TokenType.LESS_THAN: LessOperation,
             TokenType.LESS_THAN_EQUAL: LessEqualOperation,
             }
+        
+        self.TYPE_MAPPING = {
+            TokenType.INT: IntegerType,
+            TokenType.FLOAT: FloatType,
+            TokenType.BOOL: BoolType,
+            TokenType.STRING: StringType,
+            TokenType.DICT: Doctype,
+            TokenType.VARIANT: VariantType,
+            TokenType.VOID: VoidType
+        }
     
     
 
@@ -89,11 +100,9 @@ class Parser:
     
     # function_def ::= func_type, identifier, "(", [ parameters ], ")", block ;
     def parse_function_definition(self) -> Optional[FunctionDefintion]:
-        if self.current_token.type not in [TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.DICT, TokenType.BOOL, TokenType.VOID, TokenType.VARIANT]:
-            return None
         position = self.current_token.position
-        type = self.current_token.type
-        self.consume_token()
+        if not (type := self.parse_func_type()):
+            return None
         if self.current_token.type != TokenType.IDENTIFIER:
             raise BuildingFunctionError(position, self.current_token)
         name = self.current_token.value
@@ -101,9 +110,9 @@ class Parser:
         self.must_be(TokenType.LPAREN)
         params = self.parse_parameters()
         self.must_be(TokenType.RPAREN)
-        if not( block_statements := self.parse_block()):
+        if not( block_statement := self.parse_block()):
             raise BuildingFunctionError(position, self.current_token) # DODAC ERROR
-        return FunctionDefintion(position, type, name, params, block_statements)
+        return FunctionDefintion(position, type, name, params, block_statement)
 
 
     # block ::= "{", { block_statement }, "}" ;
@@ -165,15 +174,17 @@ class Parser:
             return None
         if not (expression := self.parse_or_expression()):
                 raise NoTypeMatchExpressionError(self.current_token)
+        identifier = None
         if self.try_consume(TokenType.AS):
             if not (identifier := self.try_consume(TokenType.IDENTIFIER)):
                 raise NoIdentifierAfterAs(self.current_token)
+            identifier = identifier.value
         self.must_be(TokenType.LBRACE)
         cases = []
         while match_case := self.parse_match_case():
             cases.append(match_case)
         self.must_be(TokenType.RBRACE)
-        return TypeMatch(position, expression, cases, identifier.value)
+        return TypeMatch(position, expression, cases, identifier)
 
     # match_case ::= type, "=>", block | "null", "=>", block | "_", "=>", block ;
     def parse_match_case(self):
@@ -223,8 +234,8 @@ class Parser:
     
     # for_each_loop ::= "for", "each", "(", identifier, ",", identifier, ")", "in", expression, block ;
     def parse_for_each_loop(self):
+        position = self.current_token.position
         if self.try_consume(TokenType.FOR):
-            position = self._consume.position
             self.must_be(TokenType.EACH)
             self.must_be(TokenType.LPAREN)
             key = self.must_be(TokenType.IDENTIFIER).value
@@ -232,10 +243,12 @@ class Parser:
             value = self.must_be(TokenType.IDENTIFIER).value
             self.must_be(TokenType.RPAREN)
             self.must_be(TokenType.IN)
-            struct = self.must_be(TokenType.IDENTIFIER).value
+            # struct = self.must_be(TokenType.IDENTIFIER).value
+            if not (expr := self.parse_or_expression()):
+                raise NoForEachExpression
             if not (for_each_block := self.parse_block()):
                 raise ExpectedForEachBlockOfStatements(self.current_token)
-            return ForEachStatement(position, key, value, struct, for_each_block)
+            return ForEachStatement(position, key, value, expr, for_each_block)
         return None
     
     # return_statement ::= "return", [ expression ], ";" ;
@@ -374,18 +387,20 @@ class Parser:
         return left
 
     
-    
+
     # unary_expression ::= [ "-" | "not" | "!" ], type_expression ;
     def parse_unary_expression(self):
         position = self.current_token.position
+        negate = False
         if self.current_token.value in ["-", "not", "!"]:
+            negate = True
             self.consume_token()
-            if not (expr := self.parse_type_expression()):
-                raise InvalidArithmeticExpression(self.current_token)
-            return Negation(position, expr)
         if not (type_expr := self.parse_type_expression()):
             return None
+        if negate:
+            return Negation(position, type_expr)
         return type_expr
+
 
     
     # type_expression ::= factor, [ "is", type ] ;
@@ -400,16 +415,34 @@ class Parser:
         return factor
         
     # factor ::= literal | "(", expression, ")", | obj_access ;
-    def parse_factor(self): # zrobić analogicznie jak parse_literal
-        if obj_access := self.parse_object_access():
-            return obj_access
+    # def parse_factor(self): # zrobić analogicznie jak parse_literal
+    #     if obj_access := self.parse_object_access():
+    #         return obj_access
+    #     if self.try_consume(TokenType.LPAREN):
+    #         if not (expression := self.parse_or_expression()):
+    #             raise InvalidExpression(self.current_token) 
+    #         self.must_be(TokenType.RPAREN)
+    #         return expression
+    #     if literal := self.parse_literal():
+    #         return literal
+    #     return None
+    
+    # factor ::= literal | "(", expression, ")", | obj_access ;
+    def parse_factor(self):
+        factor_value = \
+            self.parse_object_access() \
+            or self.parse_parenthesized_expression() \
+            or self.parse_literal() 
+        if factor_value:
+            return factor_value
+        return None
+
+    def parse_parenthesized_expression(self):
         if self.try_consume(TokenType.LPAREN):
             if not (expression := self.parse_or_expression()):
-                raise InvalidExpression(self.current_token) 
+                raise InvalidExpression(self.current_token)
             self.must_be(TokenType.RPAREN)
             return expression
-        if literal := self.parse_literal():
-            return literal
         return None
 
 
@@ -483,56 +516,77 @@ class Parser:
         if not (expression2 := self.parse_or_expression()):
             raise DictionaryEntryError(self.current_token)
         return  DictionaryEntry(position, expression, expression2)
-        
+
 
     # parameters ::= parameter, { ",", parameter } ;
     def parse_parameters(self):
         params = []
-        if (param := self.parse_parameter()) == None:
+        if (param := self.parse_parameter()) is None:
             return params
         params.append(param)
         while self.try_consume(TokenType.COMMA):
             if not (param := self.parse_parameter()):
                 raise InvalidParameterError(self.current_token)
-            elif param in params: # porównywanie po samej nazwie parametru param.name
-                raise SameParameterError(self.current_token.position, param)
+            elif any(existing_param.name == param.name for existing_param in params):  # Sprawdzenie unikalności nazwy
+                raise SameParameterError(self.current_token.position, param.name)
             else:
                 params.append(param)
+
         return params
+
 
 # parameter ::= type_or_variant, identifier ;
     def parse_parameter(self):
         position = self.current_token.position
-        if (token_type := self.parse_type_or_varinat()) == None:
+        if (token_type := self.parse_type()) == None:
             return None
         if param := self.try_consume(TokenType.IDENTIFIER):
             return Parameter(position, token_type, param.value)
         return None
     
 
-    def parse_type_or_varinat(self): # Zrobić matcha z mapowaniem na typy
-        token = self.current_token
-        if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VARIANT]:
-            self.consume_token()
-            return token.value
-        else:
-            return None
+    # def parse_type_or_varinat(self): # Zrobić matcha z mapowaniem na typy
+    #     token = self.current_token
+    #     if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VARIANT]:
+    #         self.consume_token()
+    #         return token.value
+    #     else:
+    #         return None
     
+    # func_type ::= type | "void";
+    # def parse_func_type(self):
+    #     token = self.current_token
+    #     if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VOID, TokenType.VARIANT]:
+    #         self.consume_token()
+    #         return token.value
+    #     else:
+    #         return None
+
     # func_type ::= type | "void";
     def parse_func_type(self):
         token = self.current_token
-        if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VOID]:
+        if (type := self.TYPE_MAPPING.get(self.current_token.type)):
             self.consume_token()
-            return token.value
+            return type(token.position, token.value)
         else:
             return None
+
+
+    # def parse_type(self):
+    #     token = self.current_token
+    #     if self.current_token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VARIANT]:
+    #         self.consume_token()
+    #         return token.value
+    #     else:
+    #         return None
+    
 
 
     def parse_type(self):
         token = self.current_token
-        if self.current_token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT]:
+        if (type := self.TYPE_MAPPING.get(self.current_token.type)) and self.current_token.type != TokenType.VOID:
             self.consume_token()
-            return token.value
+            return type(token.position, token.value)
         else:
             return None
     
