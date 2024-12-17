@@ -1,6 +1,7 @@
+from bs4 import Doctype
 from src.lexer.tokens import TokenType, Symbols, Token
 from src.errors.parser_errors import DictionaryEntriesError, DictionaryEntryError, ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAddExpression, InvalidAndExpression, InvalidArithmeticExpression, InvalidExpression, InvalidLogicExpression, InvalidMultiplicationExpression, InvalidOrExpression, InvalidWhileCondition, NoArgumentExpression, NoBlockInMatchCaseError, NoIdentifierAfterAs, NoIfCondition, NoTypeMatchExpressionError, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements
-from src.parser.objects import AndExpression, Assignment, Block, BoolValue, Dictionary, DictionaryEntry, DivExpression, EqualityOperation, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, WhileStatement
+from src.parser.objects import AndExpression, Assignment, Block, BoolType, BoolValue, Dictionary, DictionaryEntry, DivExpression, EqualityOperation, FloatType, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringType, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, VariantType, VoidType, WhileStatement
 from typing import Optional
 import io
 
@@ -36,13 +37,13 @@ class Parser:
             }
         
         self.TYPE_MAPPING = {
-            TokenType.INT: IntegerType
-            # TokenType.FLOAT: FloatType,
-            # TokenType.BOOL: BoolType,
-            # TokenType.STRING: StringType,
-            # TokenType.DICT: DictType,
-            # TokenType.VARIANT: VariantType,
-            # TokenType.VOID: VoidType
+            TokenType.INT: IntegerType,
+            TokenType.FLOAT: FloatType,
+            TokenType.BOOL: BoolType,
+            TokenType.STRING: StringType,
+            TokenType.DICT: Doctype,
+            TokenType.VARIANT: VariantType,
+            TokenType.VOID: VoidType
         }
     
     
@@ -99,11 +100,9 @@ class Parser:
     
     # function_def ::= func_type, identifier, "(", [ parameters ], ")", block ;
     def parse_function_definition(self) -> Optional[FunctionDefintion]:
-        if self.current_token.type not in [TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.DICT, TokenType.BOOL, TokenType.VOID, TokenType.VARIANT]:
-            return None
         position = self.current_token.position
-        type = self.current_token.type
-        self.consume_token()
+        if not (type := self.parse_func_type()):
+            return None
         if self.current_token.type != TokenType.IDENTIFIER:
             raise BuildingFunctionError(position, self.current_token)
         name = self.current_token.value
@@ -111,9 +110,9 @@ class Parser:
         self.must_be(TokenType.LPAREN)
         params = self.parse_parameters()
         self.must_be(TokenType.RPAREN)
-        if not( block_statements := self.parse_block()):
+        if not( block_statement := self.parse_block()):
             raise BuildingFunctionError(position, self.current_token) # DODAC ERROR
-        return FunctionDefintion(position, type, name, params, block_statements)
+        return FunctionDefintion(position, type, name, params, block_statement)
 
 
     # block ::= "{", { block_statement }, "}" ;
@@ -517,22 +516,24 @@ class Parser:
         if not (expression2 := self.parse_or_expression()):
             raise DictionaryEntryError(self.current_token)
         return  DictionaryEntry(position, expression, expression2)
-        
+
 
     # parameters ::= parameter, { ",", parameter } ;
     def parse_parameters(self):
         params = []
-        if (param := self.parse_parameter()) == None:
+        if (param := self.parse_parameter()) is None:
             return params
         params.append(param)
         while self.try_consume(TokenType.COMMA):
             if not (param := self.parse_parameter()):
                 raise InvalidParameterError(self.current_token)
-            elif param in params: # porównywanie po samej nazwie parametru param.name
-                raise SameParameterError(self.current_token.position, param)
+            elif any(existing_param.name == param.name for existing_param in params):  # Sprawdzenie unikalności nazwy
+                raise SameParameterError(self.current_token.position, param.name)
             else:
                 params.append(param)
+
         return params
+
 
 # parameter ::= type_or_variant, identifier ;
     def parse_parameter(self):
@@ -553,11 +554,20 @@ class Parser:
     #         return None
     
     # func_type ::= type | "void";
+    # def parse_func_type(self):
+    #     token = self.current_token
+    #     if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VOID, TokenType.VARIANT]:
+    #         self.consume_token()
+    #         return token.value
+    #     else:
+    #         return None
+
+    # func_type ::= type | "void";
     def parse_func_type(self):
         token = self.current_token
-        if token.type in [TokenType.INT, TokenType.FLOAT, TokenType.BOOL, TokenType.STRING, TokenType.DICT, TokenType.VOID, TokenType.VARIANT]:
+        if (type := self.TYPE_MAPPING.get(self.current_token.type)):
             self.consume_token()
-            return token.value
+            return type(token.position, token.value)
         else:
             return None
 
@@ -574,7 +584,7 @@ class Parser:
 
     def parse_type(self):
         token = self.current_token
-        if (type := self.TYPE_MAPPING.get(self.current_token.type)):
+        if (type := self.TYPE_MAPPING.get(self.current_token.type)) and self.current_token.type != TokenType.VOID:
             self.consume_token()
             return type(token.position, token.value)
         else:
