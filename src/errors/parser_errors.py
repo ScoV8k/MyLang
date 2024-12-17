@@ -21,7 +21,7 @@ class UnexpectedToken(ParserError):
 class BuildingFunctionError(ParserError):
     def __init__(self, token):
         line, column = token.position
-        message = f"SyntaxError ({line}, {column}): Błąd podczas budowania definicji funkcji '{token.value}'."
+        message = f"BuildingFunctionError ({line}, {column}): Błąd podczas budowania definicji funkcji '{token.value}'."
         super().__init__(message)
 
 
@@ -196,4 +196,52 @@ class InvalidAddExpression(ParserError):
     def __init__(self, token):
         line, column = token.position
         message = f"InvalidAddExpression: ({line}, {column}): Niepoprawne wyrażenie po operatorze dodawania/odejmowania: '{token.value}'."
+        super().__init__(message)
+
+
+class UnexpectedTokenType(ParserError):
+    def __init__(self, token, type):
+        line, column = token.position
+        message = f"UnexpectedTokenType: ({line}, {column}): Oczekiwano tokenu {type} '{token.value}'."
+        super().__init__(message)
+
+
+class NoBlockInFunctionDefinition(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoBlockInFunctionDefinition: ({line}, {column}): Oczekiwano bloku kodu w definicji funkcji '{token.value}'."
+        super().__init__(message)
+
+class NoExpressionInDeclaration(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoExpressionInDeclaration: ({line}, {column}): Oczekiwano wyrażenia po znaku '=' w deklaracji '{token.value}'."
+        super().__init__(message)
+
+
+class NoExpressionInAssignment(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoExpressionInAssignment: ({line}, {column}): Oczekiwano wyrażenia po znaku '=' w przypisaniu '{token.value}'."
+        super().__init__(message)
+
+
+class NoFunctionCallInObjectAccess(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoFunctionCallInObjectAccess: ({line}, {column}): Oczekiwano wywołania funkcji po znaku '.' '{token.value}'."
+        super().__init__(message)
+
+
+class NoFunctionCallInObjectAccess(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoFunctionCallInObjectAccess: ({line}, {column}): Oczekiwano wywołania funkcji po znaku '.' '{token.value}'."
+        super().__init__(message)
+
+
+class NoIdentifierInDeclaration(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"NoIdentifierInDeclaration: ({line}, {column}): Oczekiwano identyfikatora zmiennej '{token.value}'."
         super().__init__(message)

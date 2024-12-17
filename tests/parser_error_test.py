@@ -1,4 +1,4 @@
-from src.errors.parser_errors import SameParameterError
+from src.errors.parser_errors import BuildingFunctionError, EmptyBlockOfStatements, NoBlockInFunctionDefinition, NoExpressionInAssignment, NoExpressionInDeclaration, NoIdentifierAfterAs, NoIdentifierInDeclaration, NoTypeMatchExpressionError, SameParameterError, UnexpectedToken, UnexpectedTokenType
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
 from src.parser.objects import AndExpression, Assignment, Block, BoolType, DivExpression, EqualityOperation, FloatType, ForEachStatement, FunctionArguments, FunctionCall, Identifier, IntegerType, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, StringType, StringValue, SumExpression, TypeExpression, TypeMatch
@@ -10,39 +10,96 @@ import pytest
 import io
 
 
-def test_type():
+
+def test_same_parameters():
+    source_code = "int a, float a"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+    with pytest.raises(SameParameterError):
+        parser._parse_parameters()
+
+
+def test_parse_function_definition_missing_identifier():
+    source_code = "int 123()"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    with pytest.raises(BuildingFunctionError):
+        parser.parse_program()
+
+def test_parse_function_definition_missing_block():
+    source_code = "int main()"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    with pytest.raises(NoBlockInFunctionDefinition):
+        parser.parse_program()
+
+def test_parse_block_missing_brace():
+    source_code = "{ statement();"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    with pytest.raises(UnexpectedToken):
+        parser.parse_program()
+
+def test_parameter3():
     source_code = "int"
     source = io.StringIO(source_code)
     error_manager = ErrorManager()
     lexer = Lexer(source, error_manager)
     parser = Parser(lexer, error_manager)
 
-    type = parser.parse_type()
-    expected_type = 'int'
-    exp_type = IntegerType((1, 1), 'int') # zrobić coś takiego wszędzie
-    assert type == exp_type
+    with pytest.raises(NoIdentifierInDeclaration):
+        parser._parse_parameter()
 
-
-def test_parameters():
-    source_code = "int a, float a"
+def test_parse_block_empty_block():
+    source_code = "int main() { }"
     source = io.StringIO(source_code)
     error_manager = ErrorManager()
     lexer = Lexer(source, error_manager)
     parser = Parser(lexer, error_manager)
 
-    parameters = parser.parse_parameters()
-    exp_int = IntegerType((1, 1), 'int')
-    exp_float = FloatType((1, 8), 'float')
-    expected_parameters = []
-    expected_parameters.append(Parameter((1, 1), exp_int, 'a'))
-    expected_parameters.append(Parameter((1, 8), exp_float, 'b'))
-    assert parameters == expected_parameters
+    with pytest.raises(EmptyBlockOfStatements):
+        parser.parse_program()
 
-def test_parameters1():
-    source_code = "int a, float a"
+
+def test_parse_declaration_no_expression():
+    source_code = "int main() {int x = ;}"
     source = io.StringIO(source_code)
     error_manager = ErrorManager()
     lexer = Lexer(source, error_manager)
     parser = Parser(lexer, error_manager)
-    with pytest.raises(SameParameterError) as excinfo:
-        parser.parse_parameters()
+
+    with pytest.raises(NoExpressionInDeclaration):
+        parser.parse_program()
+
+
+def test_parse_assignment_no_expression():
+    source_code = "int main() {x = ;}"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    with pytest.raises(NoExpressionInAssignment):
+        parser.parse_program()
+
+
+def test_parse_type_match_missing_identifier():
+    source_code = "int main() {match x as { null => {} }}"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    with pytest.raises(NoIdentifierAfterAs):
+        parser.parse_program()

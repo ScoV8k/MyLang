@@ -44,7 +44,7 @@ type_expression ::= factor, [ "is", type ] ;
 
 factor ::= literal | "(", expression, ")", | obj_access ;
 
-obj_access ::= item, { ".", function_call } ;
+obj_access ::= identifier_or_function_call, { ".", identifier_or_function_call } ;
 item ::= identifier_or_function_call ;
 
 func_type ::= type | "void";

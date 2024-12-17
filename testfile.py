@@ -12,27 +12,28 @@ import io
 
 
 # source_code = "int main() {for each (key, value) in myDict { doSomething(); }}"
-# source = io.StringIO(source_code)
-# error_manager = ErrorManager()
-# lexer = Lexer(source, error_manager)
-# parser = Parser(lexer, error_manager)
+source_code = "int main() {for each (key, value) in myDict { doSomething(); }} void abc() {int a = 123; dict g = {1: \"abc\", 2: 123};}"
+source = io.StringIO(source_code)
+error_manager = ErrorManager()
+lexer = Lexer(source, error_manager)
+parser = Parser(lexer, error_manager)
 
-# program = parser.parse_program()
-# print(program)
-# expected_key = "key"
-# expected_value = "value"
-# expected_expr = Identifier((1, 38), "myDict")
-# expected_block1 = Block((1, 45), [
-#     FunctionCall((1, 47), "doSomething", None)
-# ])
-# integer_type = IntegerType((1, 1), 'int')
-# expected_for_each = ForEachStatement((1, 13), expected_key, expected_value, expected_expr, expected_block1)
-# expected_block2 = Block((1, 12), [expected_for_each])
-# expected_function_def = FunctionDefintion((1, 1), integer_type, 'main', [], expected_block2)
-# expected_program = Program((1, 1), [expected_function_def])
+program = parser.parse_program()
+print(program)
+expected_key = "key"
+expected_value = "value"
+expected_expr = Identifier((1, 38), "myDict")
+expected_block1 = Block((1, 45), [
+    FunctionCall((1, 47), "doSomething", None)
+])
+integer_type = IntegerType((1, 1), 'int')
+expected_for_each = ForEachStatement((1, 13), expected_key, expected_value, expected_expr, expected_block1)
+expected_block2 = Block((1, 12), [expected_for_each])
+expected_function_def = FunctionDefintion((1, 1), integer_type, 'main', [], expected_block2)
+expected_program = Program((1, 1), [expected_function_def])
 
-# print(expected_program)
+print(expected_program)
 
-# print("\n\n\n\n")
+print("\n\n\n\n")
 
-# print(program)
+print(program)

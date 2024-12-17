@@ -599,22 +599,21 @@ class FunctionCall(Node):
 
 
 class ObjectAccess(Node):
-    def __init__(self, position, item, function_calls) -> None:
+    def __init__(self, position, items) -> None:
         super().__init__(position)
-        self.item = item
-        self.function_calls = function_calls
+        self.items = items
+
 
     def __eq__(self, other):
         if not isinstance(other, ObjectAccess):
             return False
-        return (self.item == other.item and 
-                self.function_calls == other.function_calls and
+        return (self.items == other.items and 
                 self.position == other.position)
 
     def __str__(self):
-        calls_str = "\n  ".join(str(call) for call in self.function_calls)
-        return (f"ObjectAccess(Position: {self.position}, Item: {self.item})\n"
-                f"  Function Calls:\n  {calls_str}")
+        calls_str = "\n  ".join(str(call) for call in self.items)
+        return (f"ObjectAccess(Position: {self.position})\n"
+                f"  Items:\n  {calls_str}")
     
 class Block(Node):
     def __init__(self, position, statements) -> None:
@@ -715,6 +714,19 @@ class VoidType(Node):
     def __str__(self):
         return f"VoidType(Position: {self.position}, Value: {self.value})"
 
+class AnyType(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, AnyType):
+            return False
+        return True
+
+    def __str__(self):
+        return f"VoidType(Position: {self.position}, Value: {self.value})"
+    
 
 class DictionaryType(Node):
     def __init__(self, position, value) -> None:
