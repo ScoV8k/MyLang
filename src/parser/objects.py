@@ -106,7 +106,7 @@ class ForEachStatement(Node):
     def __eq__(self, other):
         if not isinstance(other, ForEachStatement):
             return False
-        return (self.key == other.ley and 
+        return (self.key == other.key and 
                 self.value == other.value and 
                 self.struct == other.struct and
                 self.statements == other.statements and
@@ -443,3 +443,25 @@ class Block(Node):
             return False
         return (self.statements == other.statements and 
                 self.position == other.position)
+    
+
+class StringType(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, StringValue):
+            return False
+        return True
+    
+
+class IntegerType(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, IntegerType):
+            return False
+        return True

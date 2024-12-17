@@ -176,3 +176,5 @@ class InvalidAddExpression(ParserError):
         InvalidRelationalExpression
 
         InvalidEqualityExpression
+
+        NoForEachExpression
