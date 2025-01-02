@@ -1,6 +1,13 @@
+from abc import abstractmethod
+from ..interpreter.visitor import Visitor
+
 class Node:
     def __init__(self, position) -> None:
         self.position = position
+
+    @abstractmethod
+    def accept(self, visitor: Visitor) -> None:
+        pass
 
     def __str__(self):
         return f"Node(Position: {self.position})"
@@ -16,6 +23,9 @@ class Program(Node):
         return (self.functions == other.functions and 
                 self.position == other.position)
     
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_program(self)
+    
     def __str__(self):
         func_str = "\n  ".join(str(func) for func in self.functions)
         return f"Program(Position: {self.position})\n  {func_str}"
@@ -27,6 +37,9 @@ class FunctionDefintion(Node):
         self.parameters = parameters
         self.block = block
         self.type = type
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_function_definition(self)
 
     def __eq__(self, other):
         if not isinstance(other, FunctionDefintion):
@@ -49,6 +62,9 @@ class FunctionArguments(Node):
         super().__init__(position)
         self.arguments = arguments
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_function_arguments(self)
+
     def __eq__(self, other):
         if not isinstance(other, FunctionArguments):
             return False
@@ -60,6 +76,9 @@ class ReturnStatement(Node):
     def __init__(self, position, expr):
         super().__init__(position)
         self.expr = expr
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_return_statement(self)
 
     def __eq__(self, other):
         if not isinstance(other, ReturnStatement):
@@ -75,6 +94,9 @@ class Identifier(Node):
         super().__init__(position)
         self.name = name
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_identifier(self)
+
     def __eq__(self, other):
         if not isinstance(other, Identifier):
             return False
@@ -89,6 +111,9 @@ class Parameter(Node):
         super().__init__(position)
         self.name = name
         self.type = type
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_parameter(self)
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -106,6 +131,9 @@ class ReturnStatement(Node):
         super().__init__(position)
         self.expr = expr
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_return_statement(self)
+
     def __eq__(self, other):
         if not isinstance(other, ReturnStatement):
             return False
@@ -122,6 +150,9 @@ class IfStatement(Node):
         self.condition = condition
         self.statements = statements
         self.else_statement = else_statement
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_if_statement(self)
 
     def __eq__(self, other):
         if not isinstance(other, IfStatement):
@@ -144,6 +175,9 @@ class WhileStatement(Node):
         self.condition = condition
         self.statements = statements
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_while_statement(self)
+
     def __eq__(self, other):
         if not isinstance(other, WhileStatement):
             return False
@@ -164,6 +198,11 @@ class ForEachStatement(Node):
         self.value = value
         self.struct = struct
         self.statements = statements
+
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_for_each_statement(self)
+
 
     def __eq__(self, other):
         if not isinstance(other, ForEachStatement):
@@ -201,6 +240,9 @@ class OrExpression(MultiParameterExpression):
     def __init__(self, position, expressions):
         super().__init__(position, expressions)
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_or_expression(self)
+
     def __eq__(self, other):
         if not isinstance(other, OrExpression):
             return False
@@ -215,6 +257,9 @@ class OrExpression(MultiParameterExpression):
 class AndExpression(MultiParameterExpression):
     def __init__(self, position, expressions):
         super().__init__(position, expressions)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_and_expression(self)
 
     def __eq__(self, other):
         if not isinstance(other, AndExpression):
@@ -233,6 +278,9 @@ class TypeExpression(Node):
         self.factor = factor
         self.type = type
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_type_expression(self)
+
     def __eq__(self, other):
         if not isinstance(other, TypeExpression):
             return False
@@ -248,6 +296,9 @@ class Negation(Node):
     def __init__(self, position, node):
         super().__init__(position)
         self.node = node
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_negation(self)
 
     def __eq__(self, other):
         if not isinstance(other, Negation):
@@ -274,9 +325,13 @@ class ArthExpression(Node):
 
     def __str__(self):
         return f"ArthExpression(Position: {self.position}, Left: {self.left}, Right: {self.right})"
+
 class SumExpression(ArthExpression):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_sum_expression(self)
     
     def __eq__(self, other):
         if not isinstance(other, SumExpression):
@@ -290,6 +345,9 @@ class SumExpression(ArthExpression):
 class SubExpression(ArthExpression):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_sub_expression(self)
     
     def __eq__(self, other):
         if not isinstance(other, SubExpression):
@@ -303,6 +361,9 @@ class SubExpression(ArthExpression):
 class MulExpression(ArthExpression):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_mul_expression(self)
     
     def __eq__(self, other):
         if not isinstance(other, MulExpression):
@@ -316,6 +377,9 @@ class MulExpression(ArthExpression):
 class DivExpression(ArthExpression):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_div_expression(self) 
     
     def __eq__(self, other):
         if not isinstance(other, DivExpression):
@@ -347,6 +411,9 @@ class EqualityOperation(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_equality_operation(self)
+
     def __eq__(self, other):
         if not isinstance(other, EqualityOperation):
             return False
@@ -360,6 +427,9 @@ class RelationalExpression(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_relational_operation(self)
+
     def __eq__(self, other):
         if not isinstance(other, RelationalExpression):
             return False
@@ -367,9 +437,13 @@ class RelationalExpression(BinaryOperation):
 
     def __str__(self):
         return f"RelationalExpression(Position: {self.position}, Left: {self.left}, Right: {self.right})"
+
 class NotEqualOperation(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_not_equal_operation(self)
 
     def __eq__(self, other):
         if not isinstance(other, NotEqualOperation):
@@ -384,6 +458,9 @@ class GreaterOperation(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_greater_operation(self)
+
     def __eq__(self, other):
         if not isinstance(other, GreaterOperation):
             return False
@@ -396,6 +473,9 @@ class GreaterOperation(BinaryOperation):
 class GreaterEqualOperation(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_greater_equal_operation(self)
 
     def __eq__(self, other):
         if not isinstance(other, GreaterEqualOperation):
@@ -410,6 +490,9 @@ class LessOperation(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_less_operation(self)
+
     def __eq__(self, other):
         if not isinstance(other, LessOperation):
             return False
@@ -422,6 +505,9 @@ class LessOperation(BinaryOperation):
 class LessEqualOperation(BinaryOperation):
     def __init__(self, position, left, right):
         super().__init__(position, left, right)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_less_equal_operation(self)
 
     def __eq__(self, other):
         if not isinstance(other, LessEqualOperation):
@@ -436,6 +522,9 @@ class BoolValue(Node):
     def __init__(self, position, value) -> None:
         super().__init__(position)
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_bool_value(self)
 
     def __eq__(self, other):
         if not isinstance(other, BoolValue):
@@ -452,6 +541,9 @@ class IntegerValue(Node):
         super().__init__(position)
         self.value = value
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_integer_value(self)
+
     def __eq__(self, other):
         if not isinstance(other, IntegerValue):
             return False
@@ -466,6 +558,9 @@ class FloatValue(Node):
     def __init__(self, position, value) -> None:
         super().__init__(position)
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_float_value(self)
     
     def __eq__(self, other):
         if not isinstance(other, FloatValue):
@@ -482,6 +577,9 @@ class StringValue(Node):
         super().__init__(position)
         self.value = value
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_string_value(self)
+
     def __eq__(self, other):
         if not isinstance(other, StringValue):
             return False
@@ -490,10 +588,14 @@ class StringValue(Node):
 
     def __str__(self):
         return f"StringValue(Position: {self.position}, Value: {self.value})"
+    
 class Dictionary(Node):
     def __init__(self, position, dictionary_entries) -> None:
         super().__init__(position)
         self.dictionary_entries = dictionary_entries
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_dictionary(self)
 
     def __eq__(self, other):
         if not isinstance(other, Dictionary):
@@ -512,6 +614,9 @@ class DictionaryEntry(Node):
         self.expr1 = expr1
         self.expr2 = expr2
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_dictionary_entry(self)
+
     def __eq__(self, other):
         if not isinstance(other, DictionaryEntry):
             return False
@@ -528,6 +633,9 @@ class Assignment(Node):
         super().__init__(position)
         self.target = target
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_assignment(self)
 
     def __eq__(self, other):
         if not isinstance(other, Assignment):
@@ -546,6 +654,9 @@ class TypeMatch(Node):
         self.expression = expression
         self.cases = cases
         self.identifier = identifier
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_type_match(self)
 
     def __eq__(self, other):
         if not isinstance(other, TypeMatch):
@@ -568,6 +679,11 @@ class MatchCase(Node):
         self.type = type
         self.block = block
 
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_match_case(self)
+
+
     def __eq__(self, other):
         if not isinstance(other, MatchCase):
             return False
@@ -586,6 +702,9 @@ class FunctionCall(Node):
         self.function_name = function_name
         self.arguments = arguments
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_function_call(self)
+
     def __eq__(self, other):
         if not isinstance(other, FunctionCall):
             return False
@@ -603,6 +722,8 @@ class ObjectAccess(Node):
         super().__init__(position)
         self.items = items
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_object_access(self)
 
     def __eq__(self, other):
         if not isinstance(other, ObjectAccess):
@@ -620,6 +741,9 @@ class Block(Node):
         super().__init__(position)
         self.statements = statements
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_block(self)
+
     def __eq__(self, other):
         if not isinstance(other, Block):
             return False
@@ -636,6 +760,9 @@ class StringType(Node):
         super().__init__(position)
         self.value = value
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_string_type(self)
+
     def __eq__(self, other):
         if not isinstance(other, StringType):
             return False
@@ -649,6 +776,9 @@ class IntegerType(Node):
     def __init__(self, position, value) -> None:
         super().__init__(position)
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_integer_type(self)
 
     def __eq__(self, other):
         if not isinstance(other, IntegerType):
@@ -664,6 +794,9 @@ class BoolType(Node):
         super().__init__(position)
         self.value = value
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_bool_type(self)
+
     def __eq__(self, other):
         if not isinstance(other, BoolType):
             return False
@@ -677,6 +810,9 @@ class FloatType(Node):
     def __init__(self, position, value) -> None:
         super().__init__(position)
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_float_type(self)
 
     def __eq__(self, other):
         if not isinstance(other, FloatType):
@@ -692,6 +828,9 @@ class VariantType(Node):
         super().__init__(position)
         self.value = value
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_variant_type(self)
+
     def __eq__(self, other):
         if not isinstance(other, VariantType):
             return False
@@ -706,6 +845,9 @@ class VoidType(Node):
         super().__init__(position)
         self.value = value
 
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_void_type(self)
+
     def __eq__(self, other):
         if not isinstance(other, VoidType):
             return False
@@ -718,6 +860,9 @@ class AnyType(Node):
     def __init__(self, position, value) -> None:
         super().__init__(position)
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_any_type(self)
 
     def __eq__(self, other):
         if not isinstance(other, AnyType):
@@ -732,6 +877,9 @@ class DictionaryType(Node):
     def __init__(self, position, value) -> None:
         super().__init__(position)
         self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_dictionary_type(self)
 
     def __eq__(self, other):
         if not isinstance(other, DictionaryType):
