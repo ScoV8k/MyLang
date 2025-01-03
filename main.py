@@ -6,6 +6,8 @@ from src.errors.error_manager import ErrorManager
 from src.errors.lexer_errors import InvalidTokenError, IdentifierTooLongError, LeadingZeroError,NumberTooBigError, StringTooLongError, UnterminatedStringError, InvalidEscapeSequenceError, CommentTooLongError, TooManyWhitespacesError, UnknownTokenError
 # from src.interpreter.visitor import Visitor
 from src.interpreter.print_visitor import PrintVisitor
+from src.interpreter.interpreter import Interpreter
+from src.interpreter.ex_vis import ExecuteVisitor
 import sys
 import io
 
@@ -13,7 +15,8 @@ import io
 
 
 # source_code = "int main() {for each (key, value) in myDict { doSomething(); }}"
-source_code = "int main() {for each (key, value) in myDict { doSomething(); }} void abc() {int a = 123; dict g = {1: \"abc\", 2: 123};}"
+# source_code = "int main() {for each (key, value) in myDict { doSomething(); }} void abc() {int a = 123; dict g = {1: \"abc\", 2: 123};}"
+source_code = "int main() {int a = 5;}"
 source = io.StringIO(source_code)
 error_manager = ErrorManager()
 lexer = Lexer(source, error_manager)
@@ -21,5 +24,9 @@ parser = Parser(lexer, error_manager)
 
 program = parser.parse_program()
 
-visitor = PrintVisitor()
-visitor.visit_program(program)
+visitor = ExecuteVisitor()
+printerVisitor = PrintVisitor()
+interpreter = Interpreter(program)
+printerVisitor.visit_program(program)
+result = interpreter.execute(visitor)
+print(result)

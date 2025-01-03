@@ -37,7 +37,7 @@ class Interpreter:
 
     def execute(self, visitor):
         self.program.accept(visitor)
-        main_call = FunctionCall(visitor.functions.get('main').position, 'main', FunctionArguments(visitor.functions.get('main').position, []))
+        main_call = FunctionCall(visitor.functions.get('main').position, 'main', [])
         main_call.accept(visitor)
         ret_code = visitor.last_result if visitor.last_result is not None else 0
         return self.get_nested_value(ret_code)
