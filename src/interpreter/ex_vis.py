@@ -21,6 +21,7 @@ class ExecuteVisitor(Visitor):
         self.functions[name] = func
 
 
+
     def visit_program(self, element: Program):
         for function in element.functions:
             self.add_function(function.name, function)
