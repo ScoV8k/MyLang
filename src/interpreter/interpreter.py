@@ -6,20 +6,36 @@ class Context:
         self.variables = {}
         self.while_flag = 0 # licznik while
     
-    def reset_flags(self):
-        self.return_flag = False
-
-    def add_variable(self, name, value):
-        if isinstance(value, list):
-            if name in self.variables:
-                self.variables[name].set_value(value)
-        else:
-            self.variables[name] = value
+    def add_variable(self, name, value, type):
+        if name in self.variables:
+            raise NameError(f"Zmienna {name} jest juz zdefiniowana.")
+        self.variables[name] = {
+            'value': value,
+            'type': type
+        }
 
     def get_variable(self, name):
         if name not in self.variables:
-            raise KeyError(f"Variable '{name}' is not defined.")
-        return self.variables.get(name)
+            raise KeyError(f"Zmienna {name} nie została zdefiniowana.")
+        return self.variables[name]
+    
+    def get_variable_value(self, name):
+        if name not in self.variables:
+            raise NameError(f"Zmienna '{name}' nie została zadeklarowana!")
+        return self.variables[name]['value']
+
+    def get_variable_type(self, name):
+        if name not in self.variables:
+            raise NameError(f"Zmienna '{name}' nie została zadeklarowana!")
+        return self.variables[name]['type']
+    
+    def set_variable(self, name, value):
+        if name not in self.variables:
+            raise NameError(f"Zmienna {name} nie jest zadeklarowana!")
+        # Opcjonalne sprawdzenie zgodności typu
+        # if not self._check_type_compatibility(value, self.variables[name]['type']):
+        #     raise TypeMismatchError(...)
+        self.variables[name]['value'] = value
 
     def new_context(self):
         return Context()
@@ -30,10 +46,10 @@ class Interpreter:
         self.program = program
     
     def get_nested_value(self, data):
-        if hasattr(data, 'value'):
-            return self.get_nested_value(data.value)
-        else:
-            return data
+        while hasattr(data, 'value'):
+            data = data.value
+        return data
+
 
     def execute(self, visitor):
         self.program.accept(visitor)

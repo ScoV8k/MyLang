@@ -293,9 +293,10 @@ class TypeExpression(Node):
 
 
 class Negation(Node):
-    def __init__(self, position, node):
+    def __init__(self, position, node, negation_type):
         super().__init__(position)
         self.node = node
+        self.negation_type = negation_type
 
     def accept(self, visitor: Visitor) -> None:
         visitor.visit_negation(self)
@@ -304,7 +305,8 @@ class Negation(Node):
         if not isinstance(other, Negation):
             return False
         return (self.node == other.node and 
-                self.position == other.position)
+                self.position == other.position and
+                self.negation_type == other.negation_type)
 
     def __str__(self):
         return f"Negation(Position: {self.position}, Node: {self.node})"
@@ -697,9 +699,9 @@ class MatchCase(Node):
 
 
 class FunctionCall(Node):
-    def __init__(self, position, function_name, arguments=None) -> None:
+    def __init__(self, position, name, arguments=None) -> None:
         super().__init__(position)
-        self.function_name = function_name
+        self.function_name = name
         self.arguments = arguments
 
     def accept(self, visitor: Visitor) -> None:
@@ -870,7 +872,7 @@ class AnyType(Node):
         return True
 
     def __str__(self):
-        return f"VoidType(Position: {self.position}, Value: {self.value})"
+        return f"AnyType(Position: {self.position}, Value: {self.value})"
     
 
 class DictionaryType(Node):

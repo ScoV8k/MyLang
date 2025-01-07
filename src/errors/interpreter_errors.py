@@ -17,7 +17,6 @@ class RecursionLimitExceeded(InterpreterError):
         super().__init__(message)
 
 
-
 class InvalidFunctionCall(InterpreterError):
     def __init__(self, id) -> None:
         super().__init__(f"{id} is not a function.")
@@ -49,3 +48,25 @@ class RecursionLimitExceeded(InterpreterError):
 class MainFunctionRequired(InterpreterError):
     def __init__(self, *args: object) -> None:
         super().__init__("Main function is required")
+
+class ReturnInMainFunctionRequired(InterpreterError):
+    def __init__(self) -> None:
+        super().__init__("Wymagana instrukcja return w funkcji main()")
+
+class TypeMismatchError(InterpreterError):
+    def __init__(self) -> None:
+        super().__init__("Wymagana instrukcja return w funkcji main()")
+
+
+class NegationError(InterpreterError):
+    def __init__(self, position, type, element) -> None:
+        line, column = position
+        message = f"NegationError ({line}, {column}): Nie mozna wykonac operacji negacji typu \"{type}\" na elemencie \"{element}\""
+        super().__init__(message)
+
+
+# class UnexpectedToken(ParserError):
+#     def __init__(self, token):
+#         line, column = token.position
+#         message = f"UnexpectedToken ({line}, {column}): Niespodziewany token: '{token.value}'."
+#         super().__init__(message)

@@ -16,7 +16,19 @@ import io
 
 # source_code = "int main() {for each (key, value) in myDict { doSomething(); }}"
 # source_code = "int main() {for each (key, value) in myDict { doSomething(); }} void abc() {int a = 123; dict g = {1: \"abc\", 2: 123};}"
-source_code = "int main() {int a = 5;}"
+source_code = """
+    int main() {
+        int x = 42;
+        match x {
+            int => {
+                return 111;
+            }
+            _ => {
+                return 999;
+            }
+        }
+    }
+    """
 source = io.StringIO(source_code)
 error_manager = ErrorManager()
 lexer = Lexer(source, error_manager)

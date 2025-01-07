@@ -379,11 +379,15 @@ class Parser:
         negate = False
         if self.current_token.value in ["-", "not", "!"]:
             negate = True
+            if self.current_token.value == "-":
+                negation_type = "arithmetic"
+            else:
+                negation_type = "logic"
             self._consume_token()
         if not (type_expr := self._parse_type_expression()):
             return None
         if negate:
-            return Negation(position, type_expr)
+            return Negation(position, type_expr, negation_type)
         return type_expr
 
 

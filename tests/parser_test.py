@@ -163,7 +163,7 @@ def test_unary_expression():
     expected_factor = StringValue((1, 5), "abc")
     float_type = FloatType((1, 14), 'float')
     expected_type_expression = TypeExpression((1, 5), expected_factor, float_type)
-    expected_unary_expression = Negation((1, 1), expected_type_expression)
+    expected_unary_expression = Negation((1, 1), expected_type_expression, "logic")
     assert expression == expected_unary_expression
 
 
@@ -178,7 +178,7 @@ def test_mul_expression():
     int2 = IntegerValue((1, 6), 3)
     int3 = IntegerValue((1, 10), 2)
     int = IntegerValue((1, 2), 5)
-    negation = Negation((1, 1), int)
+    negation = Negation((1, 1), int, "arithmetic")
     mul = MulExpression((1, 1), negation, int2)
     expected = DivExpression((1, 1), mul, int3)
     assert expression == expected
@@ -195,7 +195,7 @@ def test_add_expression():
     int2 = IntegerValue((1, 6), 3)
     int3 = IntegerValue((1, 10), 2)
     int = IntegerValue((1, 2), 5)
-    negation = Negation((1, 1), int)
+    negation = Negation((1, 1), int, "arithmetic")
     mul = MulExpression((1, 1), negation, int2)
     div = DivExpression((1, 6), int2, int3)
     expected = SumExpression((1, 1), negation, div)
@@ -213,7 +213,7 @@ def test_relational_expression():
     int2 = IntegerValue((1, 6), 3)
     int3 = IntegerValue((1, 10), 2)
     int = IntegerValue((1, 2), 5)
-    negation = Negation((1, 1), int)
+    negation = Negation((1, 1), int, "arithmetic")
     sum = SumExpression((1, 1), negation, int2)
     expected = LessOperation((1, 1), sum, int3)
     assert expression == expected
@@ -230,7 +230,7 @@ def test_equality_expression():
     int2 = IntegerValue((1, 6), 3)
     int3 = IntegerValue((1, 11), 2)
     int = IntegerValue((1, 2), 5)
-    negation = Negation((1, 1), int)
+    negation = Negation((1, 1), int, "arithmetic")
     sum = SumExpression((1, 1), negation, int2)
     expected = EqualityOperation((1, 1), sum, int3)
     assert expression == expected

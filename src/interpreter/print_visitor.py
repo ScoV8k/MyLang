@@ -18,7 +18,7 @@ class PrintVisitor(Visitor):
     def visit_function_definition(self, node: FunctionDefintion):
         self._print_indent(f"Function \"{node.name}\" at {node.position}")
         self.indent_level += 1
-        params = ", ".join(obj for obj in node.parameters)
+        params = ", ".join(obj.name for obj in node.parameters)
         self._print_indent(f"With parameters: \"{params}\"")
         node.block.accept(self)
         self.indent_level -= 1
@@ -29,7 +29,7 @@ class PrintVisitor(Visitor):
     def visit_return_statement(self, node: ReturnStatement):
         self._print_indent(f"ReturnStatement at {node.position}")
         self.indent_level += 1
-        node.statement.accept(self)
+        node.expr.accept(self)
         self.indent_level -= 1
 
     def visit_identifier(self, node: Identifier):
@@ -44,13 +44,13 @@ class PrintVisitor(Visitor):
         node.condition.accept(self)
         self._print_indent("Then:")
         self.indent_level += 1
-        for stmt in node.statements:
+        for stmt in node.statements.statements:
             stmt.accept(self)
         self.indent_level -= 1
         if node.else_statement:
             self._print_indent("Else:")
             self.indent_level += 1
-            for stmt in node.else_statement:
+            for stmt in node.else_statement.statements:
                 stmt.accept(self)
             self.indent_level -= 1
         self.indent_level -= 1
@@ -224,7 +224,7 @@ class PrintVisitor(Visitor):
         self._print_indent(f"MatchCase at {node.position}")
         self.indent_level += 1
         self._print_indent(f"Type: {node.type}")
-        for stmt in node.block:
+        for stmt in node.block.statements:
             stmt.accept(self)
         self.indent_level -= 1
 
