@@ -14,6 +14,9 @@ class Context:
             'type': type
         }
 
+    def has_variable(self, name):
+        return name in self.variables
+    
     def get_variable(self, name):
         if name not in self.variables:
             raise KeyError(f"Zmienna {name} nie została zdefiniowana.")
@@ -54,6 +57,6 @@ class Interpreter:
     def execute(self, visitor):
         self.program.accept(visitor)
         main_call = FunctionCall(visitor.functions.get('main').position, 'main', [])
-        main_call.accept(visitor)
+        main_call.accept(visitor) # wewnątrz wizytacji programu
         ret_code = visitor.last_result if visitor.last_result is not None else 0
-        return self.get_nested_value(ret_code)
+        return self.get_nested_value(ret_code) # return ret_code.value

@@ -175,3 +175,79 @@ def test_type_match_int():
     """
     result = execute_code(source_code)
     assert result == 111
+
+def test_type_match_float():
+    source_code = """
+    float main() {
+        float y = 3.14;
+        match y {
+            float => {
+                return 333;
+            }
+            int => {
+                return 888;
+            }
+            _ => {
+                return 999;
+            }
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 333
+
+def test_type_match_underscore():
+    source_code = """
+    int main() {
+        bool b = true;
+        match b {
+            int => {
+                return 111;
+            }
+            float => {
+                return 222;
+            }
+            _ => {
+                return 333;
+            }
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 333
+
+
+# def test_type_match_null():
+#     source_code = """
+#     int main() {
+#         var something = null;
+
+#         match something {
+#             null => {
+#                 return 123;
+#             }
+#             _ => {
+#                 return 999;
+#             }
+#         }
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 123
+
+
+def test_type_match_as_identifier():
+    source_code = """
+    int main() {
+        match (1 + 2) as foo {
+            int => {
+                return foo; 
+            }
+            _ => {
+                return 999;
+            }
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 3

@@ -18,10 +18,9 @@ import io
 # source_code = "int main() {for each (key, value) in myDict { doSomething(); }} void abc() {int a = 123; dict g = {1: \"abc\", 2: 123};}"
 source_code = """
     int main() {
-        int x = 42;
-        match x {
+        match (1 + 2) as foo {
             int => {
-                return 111;
+                return foo; 
             }
             _ => {
                 return 999;

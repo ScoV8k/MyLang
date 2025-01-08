@@ -40,12 +40,14 @@ class ExecuteVisitor(Visitor):
         for param in element.parameters:
             param.accept(self)
         
-        if element.name == "main":
-            contains_return = any(isinstance(stmt, ReturnStatement) for stmt in element.block.statements)
-            if not contains_return:
-                raise InterpreterError("Funkcja 'main' musi zawierać instrukcję 'return'.")
+        # if element.name == "main":
+        #     contains_return = any(isinstance(stmt, ReturnStatement) for stmt in element.block.statements)
+        #     if not contains_return:
+        #         raise InterpreterError("Funkcja 'main' musi zawierać instrukcję 'return'.")
 
         element.block.accept(self)
+        # weryfikacja flagi return i typu funkcji bo void nie ma inne maja i reset flagi return
+
 
 
     def visit_function_arguments(self, element):
@@ -61,6 +63,7 @@ class ExecuteVisitor(Visitor):
     def visit_identifier(self, element: Identifier):
         self.last_result = self.context.get_variable_value(element.name)
         self.last_result_type = self.context.get_variable_type(element.name)
+        # nie zwracamy typu
         
 
     def visit_parameter(self, element):
@@ -126,54 +129,31 @@ class ExecuteVisitor(Visitor):
     #     self.last_result = factor_value
 
     def visit_type_expression(self, element: TypeExpression):
-        """
-        Realizuje wyrażenia w stylu: 
-        - 3 is int
-        - a is int
-        Zwraca True lub False, w zależności od tego, 
-        czy 'factor' pasuje do 'type' (jeśli 'type' istnieje).
-        """
-
-        # Sprawdzamy, czy factor jest identyfikatorem (np. a is int)
         if isinstance(element.factor, Identifier):
             var_name = element.factor.name
-            # Pobieramy z kontekstu **zadeklarowany** typ zmiennej (np. IntegerType)
             declared_type = self.context.get_variable_type(var_name)
-
-            # Czy po "is" rzeczywiście wystąpił jakiś typ do porównania?
             if element.type:
-                # Odwiedzamy węzeł z typem (np. IntegerType)
                 element.type.accept(self)
-                expected_type = self.last_result  # np. instancja IntegerType
+                expected_type = self.last_result
 
-                # Porównujemy obiekty typów przez `type(...)` (lub inną metodę, jeśli wolisz)
                 self.last_result = (declared_type == expected_type)
             else:
-                # Brak typu po 'is' – możesz zwrócić np. sam zadeklarowany typ
-                # albo True/False w zależności od wymagań języka
                 self.last_result = declared_type
 
-        # Jeśli factor to nie identyfikator (np. literal "3", "hello", wyrażenie itp.)
         else:
             element.factor.accept(self)
             factor_value = self.last_result
 
             if element.type:
                 element.type.accept(self)
-                type_value = self.last_result  # np. IntegerType, FloatType, itd.
-
-                # Zamiast rzucać błąd, zwracamy True/False
+                type_value = self.last_result
                 self.last_result = self._check_type_compatibility(factor_value, type_value)
             else:
-                # Jeśli nie ma typu po 'is', zwróć samą wartość
                 self.last_result = factor_value
 
 
 
     def _check_type_compatibility(self, value, type_str):
-        """
-        Sprawdza, czy runtime'owa wartość `value` jest zgodna z zadanym łańcuchem `type_str`.
-        """
         if type_str == "int":
             return isinstance(value, int)
         elif type_str == "float":
@@ -215,6 +195,7 @@ class ExecuteVisitor(Visitor):
             raise TypeError(f"Prawy operand '+' musi być liczbą, otrzymano: {type(right_value).__name__}.")
 
         self.last_result = left_value + right_value
+        self.last_result_type = 'int' ### TUTAJ JEST PROBLEM Ł""" CZY SIE Z TYPE MATCH """
 
     def visit_sub_expression(self, element: SubExpression):
         element.left.accept(self)
@@ -342,7 +323,7 @@ class ExecuteVisitor(Visitor):
         self.last_result = (key, value)
 
 
-    def visit_assignment(self, element: Assignment): # narazie pisze to tak jakbym uwzględniał ze target w assignmencie to raczej identifier alo function.call, tam jeszcze jest obectacces który ma liste ale na tym skupie sie potem
+    def visit_assignment(self, element: Assignment):
         value = None
         if element.value:
             element.value.accept(self)
@@ -354,121 +335,76 @@ class ExecuteVisitor(Visitor):
         #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
         
         if variable_name in self.context.variables:
-        # Zmienna istnieje -> używamy set_variable
             self.context.set_variable(variable_name, value)
         else:
-        # Zmienna nie istnieje -> dodajemy do kontekstu
             self.context.add_variable(variable_name, value, variable_type)
 
 
     def visit_type_match(self, element: TypeMatch):
-        """
-        match expression [as x] {
-            type => { ... }
-            null => { ... }
-            _    => { ... }
-        }
 
-        1. Odwiedzamy expression, co ustawia:
-        self.last_result      = wartość wyrażenia  (np. 42, "hello", None, ...)
-        self.last_result_type = typ wyrażenia      (np. "int", "string", "null", ...)
-        2. Jeśli jest 'as x', zapisujemy do kontekstu oryginalną wartość wyrażenia.
-        3. Iterujemy po case'ach i sprawdzamy dopasowanie na podstawie expr_type.
-        """
-        # 1. Obliczamy wyrażenie
         element.expression.accept(self)
-        expr_value = self.last_result
-        expr_type = self.last_result_type  # np. "int", "float", "string", "null", ...
+        expr_value = self.last_result  
+        expr_type = self.last_result_type  
 
-        # 2. Jeśli jest 'as x', zapisujemy expr_value pod nazwą x (opcjonalnie także typ)
         if element.identifier:
             var_name = element.identifier
             if self.context.has_variable(var_name):
-                self.context.set_variable_value(var_name, expr_value)
+                self.context.set_variable(var_name, expr_value)
             else:
-                # Możesz też podać var_type=expr_type, jeśli chcesz przechowywać deklarowany typ.
-                self.context.add_variable(var_name, expr_value, var_type=None)
 
-        # 3. Sprawdzamy kolejno case'y
+                self.context.add_variable(var_name, expr_value, expr_type)
+
         for case in element.cases:
-            # Wywołujemy funkcję pomocniczą i przekazujemy expr_type (nie wartość!)
+
             if self.visit_match_case(case, expr_type):
-                # Pierwszy dopasowany case wykonuje swój blok
                 break
-
-        # Nie nadpisujemy self.last_result - 
-        # bo np. wewnątrz case mogło być 'return', czy inne działania.
-        # Zostawiamy interpretację w takim stanie, w jakim się zakończyła.
-
 
 
     def visit_match_case(self, case: MatchCase, expr_type: str):
-        """
-        Sprawdza, czy expr_type (np. "int", "float", "null", "string", ...)
-        pasuje do `case.type`, który może być:
-        - VoidType z value="null"
-        - AnyType z value="_"
-        - Normalnym typem (IntegerType, FloatType itp.)
-        
-        Jeśli pasuje, wywołuje block i zwraca True.
-        W przeciwnym razie zwraca False.
-        """
 
         match_case_type = case.type
-
-        # 1. null-case (np. 'null' => {...})
+            
         if isinstance(match_case_type, VoidType) and match_case_type.value == "null":
             if expr_type == "null":
-                # Dopasowanie się udało, wizytujemy block
                 case.block.accept(self)
                 return True
             return False
 
-        # 2. underscore-case ('_' => {...})
         if isinstance(match_case_type, AnyType) and match_case_type.value == "_":
             # '_' pasuje do wszystkiego
             case.block.accept(self)
             return True
 
-        # 3. normalny typ (np. IntegerType, FloatType, StringType...)
-        #    Odwiedzamy, żeby w self.last_result dostać np. "int", "float"
-        match_case_type.accept(self)
-        expected_type_str = self.last_result  # np. "int", "float", ...
 
-        # Porównujemy expr_type z expected_type_str
+        match_case_type.accept(self)
+        expected_type_str = self.last_result 
+
         if expr_type == expected_type_str:
             case.block.accept(self)
             return True
 
-        # Jeśli nie pasuje, zwracamy False
         return False
 
 
     def visit_function_call(self, element: FunctionCall):
-        # Sprawdzamy, czy funkcja istnieje w kontekście
         if element.function_name not in self.functions:
             raise NameError(f"Funkcja '{element.function_name}' nie została zadeklarowana.")
 
-        # Pobieramy definicję funkcji
         function = self.functions[element.function_name]
 
-        # Wizytujemy argumenty i zbieramy ich wartości
         evaluated_arguments = []
         for argument in element.arguments:
-            argument.accept(self)  # Wizytujemy wyrażenie argumentu
-            evaluated_arguments.append(self.last_result)  # Dodajemy wynik do listy argumentów
+            argument.accept(self)  
+            evaluated_arguments.append(self.last_result) 
 
-        # Sprawdzamy zgodność liczby argumentów
         if len(evaluated_arguments) != len(function.parameters):
             raise TypeError(
                 f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
                 f"otrzymano {len(evaluated_arguments)}."
             )
 
-        # Tworzymy nowy kontekst dla funkcji
         new_context = Context()
 
-        # Przypisujemy argumenty do parametrów w nowym kontekście
         for param, value in zip(function.parameters, evaluated_arguments):
             if param.type is not None:
                 if not self._check_type_compatibility(value, param.type.value):
@@ -477,27 +413,23 @@ class ExecuteVisitor(Visitor):
                 f"(wartość = {value})."
             )
 
-    # Dodajemy zmienną do kontekstu, przekazując również typ
                 new_context.add_variable(param.name, value, param.type)
 
-        # Dodajemy nowy kontekst na stos
         self.context_stack.append(new_context)
         self.context = new_context
 
         try:
-            # Wizytujemy ciało funkcji
             function.block.accept(self)
 
-            # Wynik funkcji to self.last_result (ustawiane przez `return`)
             result = self.last_result
 
         finally:
-            # Usuwamy bieżący kontekst i przywracamy poprzedni
             self.context_stack.pop()
             self.context = self.context_stack[-1]
 
         # Zwracamy wynik funkcji
         self.last_result = result
+
 
 
     def visit_object_access(self, element):
