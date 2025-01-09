@@ -28,7 +28,24 @@ source_code = """
         }
     }
     """
-source = io.StringIO(source_code)
+
+a = """
+    int main() {
+    int a = 10;
+    return a;}
+"""
+
+b = """
+    int add(int a, int b) {
+        return 1 + 2;
+    }
+
+    int main() {
+        int result = add(10, 20);
+        return result;
+    }
+    """
+source = io.StringIO(b)
 error_manager = ErrorManager()
 lexer = Lexer(source, error_manager)
 parser = Parser(lexer, error_manager)

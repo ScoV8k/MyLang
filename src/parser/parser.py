@@ -36,7 +36,7 @@ class Parser:
             }
         
         self.TYPE_MAPPING = {
-            TokenType.INT: IntegerType,
+            TokenType.INT: IntegerType, 
             TokenType.FLOAT: FloatType,
             TokenType.BOOL: BoolType,
             TokenType.STRING: StringType,

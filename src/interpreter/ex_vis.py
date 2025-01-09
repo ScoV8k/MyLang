@@ -5,6 +5,7 @@ import numpy as np
 import numbers
 import sys, os
 from src.interpreter.functions import ImportedObject, built_in_functions
+from src.interpreter.variable import VarType, Variable
 
 
 
@@ -16,6 +17,18 @@ class ExecuteVisitor(Visitor):
         self.return_flag = None
         self.context_stack = [Context()]
         self.context = self.context_stack[-1]
+
+        self.TYPE_MAPPING = {
+            IntegerType: VarType.INT, 
+            FloatType: VarType.FLOAT,      
+            BoolType: VarType.BOOL,         
+            StringType: VarType.STRING,      
+            DictionaryType: VarType.DICT,   
+            VariantType: VarType.VARIANT 
+            }
+        
+    def map_type(self, parser_type):
+        return self.TYPE_MAPPING.get(parser_type)
     
     def add_function(self, name, func):
         self.functions[name] = func
@@ -61,7 +74,7 @@ class ExecuteVisitor(Visitor):
         self.return_flag = True
 
     def visit_identifier(self, element: Identifier):
-        self.last_result = self.context.get_variable_value(element.name)
+        self.last_result = self.context.get_variable(element.name)
         self.last_result_type = self.context.get_variable_type(element.name)
         # nie zwracamy typu
         
@@ -186,11 +199,11 @@ class ExecuteVisitor(Visitor):
 
     def visit_sum_expression(self, element: SumExpression):
         element.left.accept(self)
-        left_value = self.last_result
+        left_value = self.last_result.value
         if not isinstance(left_value, (int, float)):
             raise TypeError(f"Lewy operand '+' musi być liczbą, otrzymano: {type(left_value).__name__}.")
         element.right.accept(self)
-        right_value = self.last_result
+        right_value = self.last_result.value
         if not isinstance(right_value, (int, float)):
             raise TypeError(f"Prawy operand '+' musi być liczbą, otrzymano: {type(right_value).__name__}.")
 
@@ -296,7 +309,8 @@ class ExecuteVisitor(Visitor):
         self.last_result = element.value
 
     def visit_integer_value(self, element: IntegerValue):
-        self.last_result = element.value
+        # self.last_result = element.value
+        self.last_result = Variable(element.value, VarType.INT)
 
     def visit_float_value(self, element: FloatValue):
         self.last_result = element.value
@@ -389,7 +403,8 @@ class ExecuteVisitor(Visitor):
     def visit_function_call(self, element: FunctionCall):
         if element.function_name not in self.functions:
             raise NameError(f"Funkcja '{element.function_name}' nie została zadeklarowana.")
-
+        # coś w tym miejscu powiedział e ma być get powyej bo 2 razy robie potem z tym co jest ponizej function =
+        #     tak jak to ma być ->  if (type := self.TYPE_MAPPING.get(self.current_token.type)):
         function = self.functions[element.function_name]
 
         evaluated_arguments = []
@@ -407,7 +422,7 @@ class ExecuteVisitor(Visitor):
 
         for param, value in zip(function.parameters, evaluated_arguments):
             if param.type is not None:
-                if not self._check_type_compatibility(value, param.type.value):
+                if not self._check_type_compatibility(value.value, param.type.value): # tu dodałem value.value
                     raise TypeMismatchError(
                 f"Argument '{param.name}' nie pasuje do typu {param.type} "
                 f"(wartość = {value})."
@@ -464,3 +479,15 @@ class ExecuteVisitor(Visitor):
 
     def visit_dictionary_type(self, element: DictionaryType):
         self.last_result = element.value
+
+
+#  Przemyślenia: podobno mona wywalić te wizytacje typów, ale moge
+# je zostawić i zwracać w nich wartość moją np VarType.INT
+
+# jestem w trakcie zmieniania tych typów, mój pomysł jest taki eby i visit_int_type zwracało variable
+
+# Na przykładzie sum expression moe być zwrócony albo iden albo value
+# dlatego visit_int_value musi zwracac variable i ident te zwróci variable
+
+
+#zmienilem naraxie tylko sum_expr:         left_value = self.last_result.value i 

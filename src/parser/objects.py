@@ -36,7 +36,7 @@ class FunctionDefintion(Node):
         self.name = name
         self.parameters = parameters
         self.block = block
-        self.type = type
+        self.type = type 
 
     def accept(self, visitor: Visitor) -> None:
         visitor.visit_function_definition(self)
