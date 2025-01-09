@@ -1,6 +1,6 @@
 from src.lexer.tokens import TokenType, Symbols, Token
-from src.errors.parser_errors import DictionaryEntriesError, DictionaryEntryError, ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAddExpression, InvalidAndExpression, InvalidArithmeticExpression, InvalidEqualityExpression, InvalidExpression, InvalidLogicExpression, InvalidMultiplicationExpression, InvalidOrExpression, InvalidRelationalExpression, InvalidWhileCondition, NoArgumentExpression, NoBlockInFunctionDefinition, NoBlockInMatchCaseError, NoExpressionInAssignment, NoExpressionInDeclaration, NoForEachExpression, NoFunctionCallInObjectAccess, NoIdentifierAfterAs, NoIdentifierInDeclaration, NoIfCondition, NoTypeMatchExpressionError, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements, UnexpectedTokenType
-from src.parser.objects import AndExpression, AnyType, Assignment, Block, BoolType, BoolValue, Dictionary, DictionaryEntry, DictionaryType, DivExpression, EqualityOperation, FloatType, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringType, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, VariantType, VoidType, WhileStatement
+from src.errors.parser_errors import InvalidTypeExpression, DictionaryEntriesError, DictionaryEntryError, ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAddExpression, InvalidAndExpression, InvalidArithmeticExpression, InvalidEqualityExpression, InvalidExpression, InvalidLogicExpression, InvalidMultiplicationExpression, InvalidOrExpression, InvalidRelationalExpression, InvalidWhileCondition, NoArgumentExpression, NoBlockInFunctionDefinition, NoBlockInMatchCaseError, NoExpressionInAssignment, NoExpressionInDeclaration, NoForEachExpression, NoFunctionCallInObjectAccess, NoIdentifierAfterAs, NoIdentifierInDeclaration, NoIfCondition, NoTypeMatchExpressionError, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements, UnexpectedTokenType
+from src.parser.objects import NullValue, AndExpression, AnyType, Assignment, Block, BoolType, BoolValue, Dictionary, DictionaryEntry, DictionaryType, DivExpression, EqualityOperation, FloatType, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringType, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, VariantType, VoidType, WhileStatement
 from typing import Optional
 import io
 
@@ -398,7 +398,7 @@ class Parser:
             return None
         if self._try_consume(TokenType.IS):
             if not (type := self._parse_type()):
-                raise InvalidArithmeticExpression(self.current_token)   
+                raise InvalidTypeExpression(self.current_token)   
             return TypeExpression(position, factor, type)
         return factor
         
@@ -429,7 +429,8 @@ class Parser:
             or self._parse_integer()  \
             or self._parse_float()   \
             or self._parse_string()  \
-            or self._parse_dictionary()
+            or self._parse_dictionary() \
+            or self._parse_null()
         if variable_value:
             return variable_value
         return None
@@ -459,6 +460,12 @@ class Parser:
         if (token := self._try_consume(TokenType.STRING_VALUE)) == None:
             return None
         return StringValue(position, token.value)
+    
+    def _parse_null(self):
+        position = self.current_token.position
+        if (token := self._try_consume(TokenType.NULL)) == None:
+            return None
+        return NullValue(position, token.value)
     
 
     # dictionary ::= "{", [ dict_entries ], "}" ;

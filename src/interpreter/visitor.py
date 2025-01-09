@@ -114,6 +114,10 @@ class Visitor(ABC):
         pass
 
     @abstractmethod
+    def visit_null_value(self, element):
+        pass
+
+    @abstractmethod
     def visit_dictionary(self, element):
         pass
 

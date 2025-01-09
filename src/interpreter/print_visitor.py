@@ -191,6 +191,10 @@ class PrintVisitor(Visitor):
     def visit_string_value(self, node: StringValue):
         self._print_indent(f"StringValue \"{node.value}\" at {node.position}")
 
+    def visit_null_value(self, node: NullValue):
+        self._print_indent(f"NullValue \"{node.value}\" at {node.position}")
+
+
     def visit_dictionary(self, node: Dictionary):
         self._print_indent(f"Dictionary at {node.position}")
         self.indent_level += 1

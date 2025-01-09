@@ -132,6 +132,18 @@ def test_identifier_or_keyword():
 
     run_lexer_test(source_code, expected_tokens, expected_errors)
 
+def test_keywords():
+    source_code = "if null"
+    expected_tokens = [
+        Token(TokenType.IF, "if", (1, 1)),
+        Token(TokenType.NULL, "null", (1, 4)),
+        Token(TokenType.EOF, None, (1, 8)),
+    ]
+    expected_errors = []
+
+    run_lexer_test(source_code, expected_tokens, expected_errors)
+
+
 def test_identifier_or_keyword2():
     source_code = "void funkcja()"
     expected_tokens = [

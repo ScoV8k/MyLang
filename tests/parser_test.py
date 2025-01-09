@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import AndExpression, AnyType, Assignment, Block, BoolType, DivExpression, EqualityOperation, FloatType, ForEachStatement, FunctionArguments, FunctionCall, Identifier, IntegerType, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, Program, StringType, StringValue, SumExpression, TypeExpression, TypeMatch, VoidType
+from src.parser.objects import NullValue, AndExpression, ReturnStatement, AnyType, Assignment, Block, BoolType, DivExpression, EqualityOperation, FloatType, ForEachStatement, FunctionArguments, FunctionCall, Identifier, IntegerType, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, Program, StringType, StringValue, SumExpression, TypeExpression, TypeMatch, VoidType
 # from src.lexer.source import String, File
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
@@ -331,4 +331,25 @@ def test__parse_program_with_for_each_loop():
     expected_program = Program((1, 1), [expected_function_def])
     assert program == expected_program
 
+def test__parse_program_null_value():
+    source_code = "int main() {int b = null; return b;}"
+    source = io.StringIO(source_code)
+    error_manager = ErrorManager()
+    lexer = Lexer(source, error_manager)
+    parser = Parser(lexer, error_manager)
+
+    program = parser.parse_program()
+    print(program)
+
+    integer_type = IntegerType((1, 1), 'int')
+    iden1 = Parameter((1,13), IntegerType((1, 13), 'int'), 'b')
+    iden2 = Identifier((1, 34), 'b')
+    assign = Assignment((1, 13), iden1, NullValue((1, 21), 'null'))
+    ret = ReturnStatement((1, 27), iden2)
+    expected_block2 = Block((1, 12), [assign, ret])
+    expected_function_def = FunctionDefintion((1, 1), integer_type, 'main', [], expected_block2)
+    expected_program = Program((1, 1), [expected_function_def])
+    print("\n\n\n")
+    print(expected_program)
+    assert program == expected_program
 

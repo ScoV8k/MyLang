@@ -37,15 +37,28 @@ a = """
 
 b = """
     int add(int a, int b) {
-        return 1 + 2;
+        return a + b + 10;
     }
 
     int main() {
-        int result = add(10, 20);
+        int result = add(10, 20) + 1;
         return result;
     }
     """
-source = io.StringIO(b)
+c = """
+    int main() {
+        int a = 5 + 2 * 8;
+        return a;
+    }
+    """
+
+d = """
+    int main() {
+        int a = not 0;
+        return a;
+    }
+    """
+source = io.StringIO(d)
 error_manager = ErrorManager()
 lexer = Lexer(source, error_manager)
 parser = Parser(lexer, error_manager)

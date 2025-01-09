@@ -1,6 +1,7 @@
 # from .builtins import built_in_functions
 from src.parser.objects import FunctionCall, FunctionArguments
-from src.interpreter.variable import Variable, VarType
+from src.interpreter.variable import VarType, Variable
+from src.interpreter.typed_value import TypedValue
     
 class Context:
     def __init__(self):

@@ -591,6 +591,25 @@ class StringValue(Node):
     def __str__(self):
         return f"StringValue(Position: {self.position}, Value: {self.value})"
     
+
+class NullValue(Node):
+    def __init__(self, position, value) -> None:
+        super().__init__(position)
+        self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_null_value(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, NullValue):
+            return False
+        return (self.value == other.value and 
+                self.position == other.position)
+
+    def __str__(self):
+        return f"NullValue(Position: {self.position}, Value: {self.value})"
+    
+
 class Dictionary(Node):
     def __init__(self, position, dictionary_entries) -> None:
         super().__init__(position)

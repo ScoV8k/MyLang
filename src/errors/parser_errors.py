@@ -146,6 +146,12 @@ class InvalidArithmeticExpression(ParserError):
         message = f"InvalidArithmeticExpression: ({line}, {column}): Niepoprawne wyrazenie po operatorze arytmetycznym: '{token.value}'."
         super().__init__(message)
 
+class InvalidTypeExpression(ParserError):
+    def __init__(self, token):
+        line, column = token.position
+        message = f"InvalidTypeExpression: ({line}, {column}): Nie podano zadnego typu po 'is' w type expression."
+        super().__init__(message)
+
 class InvalidNegationExpression(ParserError):
     def __init__(self, token):
         line, column = token.position

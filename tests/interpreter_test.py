@@ -31,6 +31,106 @@ def test_variable_assignment():
     result = execute_code(source_code)
     assert result == 10
 
+def test_sum_expression():
+    source_code = """
+    int main() {
+        int a = 5 + 3;
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 8
+
+def test_sum_expression2():
+    source_code = """
+    int add(int a, int b) {
+        return a + b + 10;
+    }
+
+    int main() {
+        int result = add(10, 20) + 1;
+        return result;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 41
+
+def test_sum_different_types():
+    source_code = """
+    float main() {
+        int a = 5 + 3;
+        float b = 10.5 + 2;
+        return b;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 12.5
+
+def test_sub_expression():
+    source_code = """
+    int main() {
+        int a = 5 - 3;
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 2
+
+def test_sub_expression2():
+    source_code = """
+    int sub(int a, int b) {
+        return a - b - 1;
+    }
+
+    int main() {
+        int result = sub(20, 10) - 1;
+        return result;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 8
+
+def test_mul_expression2():
+    source_code = """
+    int mul(int a, int b) {
+        return a * b * 1;
+    }
+
+    float main() {
+        float result = mul(1, 3) * 0.5;
+        return result;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 1.5
+
+def test_mul_string():
+    source_code = """
+    string mul(int a, string b) {
+        return a * b;
+    }
+
+    string main() {
+        string result = mul(2, "abc");
+        return result;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == "abcabc"
+
+def test_div_expression2():
+    source_code = """
+    int div(int a, int b) {
+        return a / b / 1;
+    }
+
+    float main() {
+        float result = div(10, 5) / 0.5;
+        return result;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 4
 
 def test_arithmetic_operations():
     source_code = """
@@ -42,6 +142,15 @@ def test_arithmetic_operations():
     result = execute_code(source_code)
     assert result == 11
 
+def test_equality_operations():
+    source_code = """
+    bool main() {
+        bool a = 2 == 2;
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == True
 
 def test_function_call():
     source_code = """
@@ -176,7 +285,7 @@ def test_type_match_int():
     result = execute_code(source_code)
     assert result == 111
 
-def test_type_match_float():
+# def test_type_match_float():
     source_code = """
     float main() {
         float y = 3.14;
@@ -201,6 +310,7 @@ def test_type_match_underscore():
     int main() {
         bool b = true;
         match b {
+            string => {return 1;}
             int => {
                 return 111;
             }

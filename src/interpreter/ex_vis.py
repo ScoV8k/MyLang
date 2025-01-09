@@ -5,7 +5,8 @@ import numpy as np
 import numbers
 import sys, os
 from src.interpreter.functions import ImportedObject, built_in_functions
-from src.interpreter.variable import VarType, Variable
+from src.interpreter.variable import VarType
+from src.interpreter.typed_value import TypedValue
 
 
 
@@ -28,7 +29,7 @@ class ExecuteVisitor(Visitor):
             }
         
     def map_type(self, parser_type):
-        return self.TYPE_MAPPING.get(parser_type)
+        return self.TYPE_MAPPING.get(type(parser_type))
     
     def add_function(self, name, func):
         self.functions[name] = func
@@ -144,25 +145,22 @@ class ExecuteVisitor(Visitor):
     def visit_type_expression(self, element: TypeExpression):
         if isinstance(element.factor, Identifier):
             var_name = element.factor.name
-            declared_type = self.context.get_variable_type(var_name)
+            variable = self.context.get_variable(var_name)
             if element.type:
-                element.type.accept(self)
-                expected_type = self.last_result
 
-                self.last_result = (declared_type == expected_type)
+                self.last_result = TypedValue((variable.type == self.map_type(element.type)), VarType.BOOL)
             else:
-                self.last_result = declared_type
+                self.last_result = variable.type # nie wiem co dokładnie tutaj abc is (i tu nic nie ma?)
 
         else:
             element.factor.accept(self)
             factor_value = self.last_result
 
             if element.type:
-                element.type.accept(self)
-                type_value = self.last_result
-                self.last_result = self._check_type_compatibility(factor_value, type_value)
+                # element.type.accept(self)
+                self.last_result = TypedValue(self._check_type_compatibility(factor_value, element.type), VarType.BOOL)
             else:
-                self.last_result = factor_value
+                self.last_result = factor_value # tez chyba nie mozliwe
 
 
 
@@ -191,132 +189,190 @@ class ExecuteVisitor(Visitor):
     def visit_negation(self, element: Negation):
         element.node.accept(self)
         if element.negation_type == "logic":
-            self.last_result = not self.last_result
+            # self.last_result = not self.last_result
+            self.last_result.set_value(not self.last_result.value)
         elif element.negation_type == "arithmetic":
-            self.last_result = - self.last_result
+            # self.last_result = - self.last_result
+            self.last_result.set_value(- self.last_result.value)
         else:
             raise NegationError(element.position,element.negation_type, self.last_result)
 
     def visit_sum_expression(self, element: SumExpression):
         element.left.accept(self)
-        left_value = self.last_result.value
-        if not isinstance(left_value, (int, float)):
-            raise TypeError(f"Lewy operand '+' musi być liczbą, otrzymano: {type(left_value).__name__}.")
-        element.right.accept(self)
-        right_value = self.last_result.value
-        if not isinstance(right_value, (int, float)):
-            raise TypeError(f"Prawy operand '+' musi być liczbą, otrzymano: {type(right_value).__name__}.")
-
-        self.last_result = left_value + right_value
-        self.last_result_type = 'int' ### TUTAJ JEST PROBLEM Ł""" CZY SIE Z TYPE MATCH """
-
-    def visit_sub_expression(self, element: SubExpression):
-        element.left.accept(self)
         left_value = self.last_result
-        if not isinstance(left_value, (int, float)):
-            raise TypeError(f"Lewy operand '-' musi być liczbą, otrzymano: {type(left_value).__name__}.")
+        if not isinstance(left_value.value, (int, float)):
+            raise TypeError(f"Lewy operand '+' musi być liczbą, otrzymano: {type(left_value.value).__name__}.")
         element.right.accept(self)
         right_value = self.last_result
-        if not isinstance(right_value, (int, float)):
-            raise TypeError(f"Prawy operand '-' musi być liczbą, otrzymano: {type(right_value).__name__}.")
-        self.last_result = left_value - right_value
+        if not isinstance(right_value.value, (int, float)):
+            raise TypeError(f"Prawy operand '+' musi być liczbą, otrzymano: {type(right_value.value).__name__}.")
+
+        result_value = left_value.value + right_value.value
+
+        if left_value.type == VarType.FLOAT or right_value.type == VarType.FLOAT:
+            result_type = VarType.FLOAT
+        else:
+            result_type = VarType.INT
+
+        self.last_result = TypedValue(result_value, result_type)
+
+    def visit_sub_expression(self, element: SubExpression):
+        # 1. Odwiedzamy lewe wyrażenie
+        element.left.accept(self)
+        left_var = self.last_result  # to jest Variable
+        if not isinstance(left_var.value, (int, float)):
+            raise TypeError(
+                f"Lewy operand '-' musi być liczbą, otrzymano: {type(left_var.value).__name__}."
+            )
+        
+        element.right.accept(self)
+        right_var = self.last_result
+        if not isinstance(right_var.value, (int, float)):
+            raise TypeError(
+                f"Prawy operand '-' musi być liczbą, otrzymano: {type(right_var.value).__name__}."
+            )
+
+        result_value = left_var.value - right_var.value
+        
+        if left_var.type == VarType.FLOAT or right_var.type == VarType.FLOAT:
+            result_type = VarType.FLOAT
+        else:
+            result_type = VarType.INT
+
+        self.last_result = TypedValue(result_value, result_type)
+
 
     def visit_mul_expression(self, element: MulExpression):
         element.left.accept(self)
-        left_value = self.last_result
+        left_var = self.last_result
+        left_value = left_var.value
+        
         element.right.accept(self)
-        right_value = self.last_result
+        right_var = self.last_result
+        right_value = right_var.value
 
         if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
-            self.last_result = left_value * right_value
+            result_value = left_value * right_value
+            # wynik jest float, jeśli któryś operand to float
+            if left_var.type == VarType.FLOAT or right_var.type == VarType.FLOAT:
+                result_type = VarType.FLOAT
+            else:
+                result_type = VarType.INT
+
         elif isinstance(left_value, str) and isinstance(right_value, int):
-            self.last_result = left_value * right_value
+            result_value = left_value * right_value
+            result_type = VarType.STRING
+
         elif isinstance(right_value, str) and isinstance(left_value, int):
-            self.last_result = right_value * left_value
+            result_value = right_value * left_value
+            result_type = VarType.STRING
+
         else:
             raise TypeError(
-                f"Nieobsługiwane typy operandów dla '*': {type(left_value).__name__} i {type(right_value).__name__}."
+                f"Nieobsługiwane typy operandów dla '*': "
+                f"{type(left_value).__name__} i {type(right_value).__name__}."
             )
+
+        self.last_result = TypedValue(result_value, result_type)
+
 
 
     def visit_div_expression(self, element: DivExpression):
         element.left.accept(self)
-        left_value = self.last_result
-        if not isinstance(left_value, (int, float)):
-            raise TypeError(f"Lewy operand '/' musi być liczbą, otrzymano: {type(left_value).__name__}.")
-
+        left_var = self.last_result
         element.right.accept(self)
-        right_value = self.last_result
-        if not isinstance(right_value, (int, float)):
-            raise TypeError(f"Prawy operand '/' musi być liczbą, otrzymano: {type(right_value).__name__}.")
-
-        if right_value == 0:
-            raise ZeroDivisionError("Dzielenie przez zero jest niedozwolone.")
+        right_var = self.last_result
         
-        self.last_result = left_value / right_value
+        if not isinstance(left_var.value, (int, float)):
+            raise TypeError(f"Lewy operand '/' musi być liczbą, otrzymano: {type(left_var.value).__name__}.")
+        if not isinstance(right_var.value, (int, float)):
+            raise TypeError(f"Prawy operand '/' musi być liczbą, otrzymano: {type(right_var.value).__name__}.")
+        if right_var.value == 0:
+            raise ZeroDivisionError("Dzielenie przez zero jest niedozwolone.")
+        result_value = left_var.value / right_var.value
+        if left_var.type == VarType.FLOAT or right_var.type == VarType.FLOAT:
+            result_type = VarType.FLOAT
+        else:
+            result_type = VarType.INT
+        self.last_result = TypedValue(result_value, result_type)
 
 
     def visit_equality_operation(self, element: EqualityOperation):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left == right
+        right_var = self.last_result
+        result_value = (left_var.value == right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
 
     def visit_relational_operation(self, element: RelationalExpression):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left == right
+        right_var = self.last_result
+        result_value = (left_var.value == right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
 
     def visit_not_equal_operation(self, element: NotEqualOperation):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left != right
+        right_var = self.last_result
+        result_value = (left_var.value != right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
 
     def visit_greater_operation(self, element: GreaterOperation):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left > right
+        right_var = self.last_result
+        result_value = (left_var.value > right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
 
     def visit_greater_equal_operation(self, element: GreaterEqualOperation):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left >= right
+        right_var = self.last_result
+        result_value = (left_var.value >= right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
 
     def visit_less_operation(self, element: LessOperation):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left < right
+        right_var = self.last_result
+        result_value = (left_var.value < right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
 
     def visit_less_equal_operation(self, element: LessEqualOperation):
         element.left.accept(self)
-        left = self.last_result
+        left_var = self.last_result
         element.right.accept(self)
-        right = self.last_result
-        self.last_result = left <= right
+        right_var = self.last_result
+        result_value = (left_var.value <= right_var.value)
+        self.last_result = TypedValue(result_value, VarType.BOOL)
+
 
     def visit_bool_value(self, element: BoolValue):
-        self.last_result = element.value
+        # self.last_result = element.value
+        self.last_result = TypedValue(element.value, VarType.BOOL)
 
     def visit_integer_value(self, element: IntegerValue):
         # self.last_result = element.value
-        self.last_result = Variable(element.value, VarType.INT)
+        self.last_result = TypedValue(element.value, VarType.INT)
+        # self.last_result = 1
 
     def visit_float_value(self, element: FloatValue):
-        self.last_result = element.value
+        # self.last_result = element.value
+        self.last_result = TypedValue(element.value, VarType.FLOAT)
 
     def visit_string_value(self, element: StringValue):
-        self.last_result = element.value
+        self.last_result = TypedValue(element.value, VarType.STRING)
+
+    def visit_null_value(self, element: NullValue):
+        self.last_result = TypedValue(element.value, VarType.STRING)
+
 
     def visit_dictionary(self, element: Dictionary):
         dictionary_result = {}
@@ -344,21 +400,20 @@ class ExecuteVisitor(Visitor):
         value = self.last_result
 
         variable_name = element.target.name
-        variable_type = element.target.type.value
+        variable_type = self.map_type(element.target.type)
         # if element.target.name not in self.context.variables:
         #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
         
         if variable_name in self.context.variables:
-            self.context.set_variable(variable_name, value)
+            self.context.set_variable(variable_name, value.value)
         else:
-            self.context.add_variable(variable_name, value, variable_type)
+            self.context.add_variable(variable_name, value.value, variable_type)
 
 
     def visit_type_match(self, element: TypeMatch):
 
         element.expression.accept(self)
         expr_value = self.last_result  
-        expr_type = self.last_result_type  
 
         if element.identifier:
             var_name = element.identifier
@@ -366,15 +421,15 @@ class ExecuteVisitor(Visitor):
                 self.context.set_variable(var_name, expr_value)
             else:
 
-                self.context.add_variable(var_name, expr_value, expr_type)
+                self.context.add_variable(var_name, expr_value, expr_value.type)
 
         for case in element.cases:
 
-            if self.visit_match_case(case, expr_type):
+            if self.visit_match_case(case, expr_value.type):
                 break
 
 
-    def visit_match_case(self, case: MatchCase, expr_type: str):
+    def visit_match_case(self, case: MatchCase, expr_type):
 
         match_case_type = case.type
             
@@ -390,10 +445,9 @@ class ExecuteVisitor(Visitor):
             return True
 
 
-        match_case_type.accept(self)
-        expected_type_str = self.last_result 
+        # match_case_type.accept(self)
 
-        if expr_type == expected_type_str:
+        if expr_type == self.map_type(match_case_type):
             case.block.accept(self)
             return True
 
@@ -428,7 +482,7 @@ class ExecuteVisitor(Visitor):
                 f"(wartość = {value})."
             )
 
-                new_context.add_variable(param.name, value, param.type)
+                new_context.add_variable(param.name, value.value, self.map_type(param.type))
 
         self.context_stack.append(new_context)
         self.context = new_context
@@ -457,28 +511,28 @@ class ExecuteVisitor(Visitor):
                 break
 
     def visit_string_type(self, element: StringType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_integer_type(self, element: IntegerType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_bool_type(self, element: BoolType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_float_type(self, element: FloatType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_variant_type(self, element: VariantType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_void_type(self, element: VoidType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_any_type(self, element: AnyType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
     def visit_dictionary_type(self, element: DictionaryType):
-        self.last_result = element.value
+        self.last_result = self.map_type(element)
 
 
 #  Przemyślenia: podobno mona wywalić te wizytacje typów, ale moge
