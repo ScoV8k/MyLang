@@ -290,11 +290,11 @@ def test_type_match_int():
     float main() {
         float y = 3.14;
         match y {
-            float => {
-                return 333;
-            }
             int => {
                 return 888;
+            }
+            float => {
+                return 333;
             }
             _ => {
                 return 999;
@@ -317,6 +317,7 @@ def test_type_match_underscore():
             float => {
                 return 222;
             }
+            null => {return 2;}
             _ => {
                 return 333;
             }
@@ -327,23 +328,62 @@ def test_type_match_underscore():
     assert result == 333
 
 
-# def test_type_match_null():
-#     source_code = """
-#     int main() {
-#         var something = null;
+def test_type_match_variant_null():
+    source_code = """
+    int main() {
+        variant something = null;
 
-#         match something {
-#             null => {
-#                 return 123;
-#             }
-#             _ => {
-#                 return 999;
-#             }
-#         }
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 123
+        match something {
+            null => {
+                return 123;
+            }
+            _ => {
+                return 999;
+            }
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 123
+
+
+def test_type_match_variant_int_typematch_any():
+    source_code = """
+    int main() {
+        variant something = 12;
+
+        match something {
+            null => {
+                return 123;
+            }
+            _ => {
+                return 999;
+            }
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 999
+
+
+def test_type_match_variant_int_typematch_int():
+    source_code = """
+    int main() {
+        variant something = 12;
+
+        match something {
+            null => {
+                return 123;
+            }
+            int => { return 12;}
+            _ => {
+                return 999;
+            }
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 12
 
 
 def test_type_match_as_identifier():
@@ -361,3 +401,19 @@ def test_type_match_as_identifier():
     """
     result = execute_code(source_code)
     assert result == 3
+
+
+def test_type_match_as_identifier2():
+    source_code = """
+    int type() {
+        match (1 + 2) as three {
+            null => {return 0;}
+            int => {return three+1;}}}
+
+    int main() {
+        int result = type();
+        return result;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 4

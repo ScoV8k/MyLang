@@ -9,6 +9,7 @@ class VarType(Enum):
     ANY = "any"
     VOID = "void"
     VARIANT = "variant"
+    NULL = "null"
 
 
 class TypedValue:

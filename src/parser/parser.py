@@ -465,7 +465,8 @@ class Parser:
         position = self.current_token.position
         if (token := self._try_consume(TokenType.NULL)) == None:
             return None
-        return NullValue(position, token.value)
+        # return NullValue(position, token.value)
+        return NullValue(position, None)
     
 
     # dictionary ::= "{", [ dict_entries ], "}" ;

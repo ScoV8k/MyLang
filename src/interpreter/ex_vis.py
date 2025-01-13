@@ -25,11 +25,27 @@ class ExecuteVisitor(Visitor):
             BoolType: VarType.BOOL,         
             StringType: VarType.STRING,      
             DictionaryType: VarType.DICT,   
-            VariantType: VarType.VARIANT 
+            VariantType: VarType.VARIANT,
+            VoidType: VarType.NULL
             }
         
-    def map_type(self, parser_type):
-        return self.TYPE_MAPPING.get(type(parser_type))
+        self.VALUE_TYPE_MAPPING = {
+            int: VarType.INT,
+            float: VarType.FLOAT,
+            bool: VarType.BOOL,
+            str: VarType.STRING,
+            dict: VarType.DICT,
+            
+        }
+            
+    def map_object_type_to_vartype(self, parser_type):
+        result = self.TYPE_MAPPING.get(type(parser_type))
+        return result
+    
+
+    def map_value_type_to_vartype(self, value):
+        result = self.VALUE_TYPE_MAPPING.get(type(value), VarType.NULL)
+        return result
     
     def add_function(self, name, func):
         self.functions[name] = func
@@ -148,7 +164,7 @@ class ExecuteVisitor(Visitor):
             variable = self.context.get_variable(var_name)
             if element.type:
 
-                self.last_result = TypedValue((variable.type == self.map_type(element.type)), VarType.BOOL)
+                self.last_result = TypedValue((variable.type == self.map_object_type_to_vartype(element.type)), VarType.BOOL)
             else:
                 self.last_result = variable.type # nie wiem co dokładnie tutaj abc is (i tu nic nie ma?)
 
@@ -371,7 +387,7 @@ class ExecuteVisitor(Visitor):
         self.last_result = TypedValue(element.value, VarType.STRING)
 
     def visit_null_value(self, element: NullValue):
-        self.last_result = TypedValue(element.value, VarType.STRING)
+        self.last_result = TypedValue(element.value, VarType.NULL)
 
 
     def visit_dictionary(self, element: Dictionary):
@@ -400,15 +416,16 @@ class ExecuteVisitor(Visitor):
         value = self.last_result
 
         variable_name = element.target.name
-        variable_type = self.map_type(element.target.type)
+        variable_type = self.map_object_type_to_vartype(element.target.type)
         # if element.target.name not in self.context.variables:
         #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
         
-        if variable_name in self.context.variables:
-            self.context.set_variable(variable_name, value.value)
-        else:
-            self.context.add_variable(variable_name, value.value, variable_type)
+        value_to_set = value if variable_type == VarType.DICT else value.value
 
+        if variable_name in self.context.variables:
+            self.context.set_variable(variable_name, value_to_set)
+        else:
+            self.context.add_variable(variable_name, value_to_set, variable_type)
 
     def visit_type_match(self, element: TypeMatch):
 
@@ -421,36 +438,45 @@ class ExecuteVisitor(Visitor):
                 self.context.set_variable(var_name, expr_value)
             else:
 
-                self.context.add_variable(var_name, expr_value, expr_value.type)
+                self.context.add_variable(var_name, expr_value.value, expr_value.type)
 
         for case in element.cases:
 
-            if self.visit_match_case(case, expr_value.type):
+            if self.visit_match_case(case, expr_value):
                 break
 
 
-    def visit_match_case(self, case: MatchCase, expr_type):
+    def visit_match_case(self, case: MatchCase, expr_value):
 
         match_case_type = case.type
             
-        if isinstance(match_case_type, VoidType) and match_case_type.value == "null":
-            if expr_type == "null":
-                case.block.accept(self)
-                return True
-            return False
+        # if isinstance(match_case_type, VoidType) and match_case_type.value == "null":
+        #     if expr_value.type == VarType.VARIANT:
+        #         case.block.accept(self)
+        #         return True
+        #     return False
+
+        # if isinstance(match_case_type, AnyType) and match_case_type.value == "_":
+        #     # '_' pasuje do wszystkiego
+        #     case.block.accept(self)
+        #     return True
+
+
+        # # match_case_type.accept(self)
+
+        # if expr_value.type == self.map_object_type_to_vartype(match_case_type):
+        #     case.block.accept(self)
+        #     return True
+        # return False
 
         if isinstance(match_case_type, AnyType) and match_case_type.value == "_":
             # '_' pasuje do wszystkiego
             case.block.accept(self)
             return True
-
-
-        # match_case_type.accept(self)
-
-        if expr_type == self.map_type(match_case_type):
+        
+        if self.map_value_type_to_vartype(expr_value.value) == self.map_object_type_to_vartype(match_case_type):
             case.block.accept(self)
             return True
-
         return False
 
 
@@ -466,23 +492,26 @@ class ExecuteVisitor(Visitor):
             argument.accept(self)  
             evaluated_arguments.append(self.last_result) 
 
-        if len(evaluated_arguments) != len(function.parameters):
-            raise TypeError(
-                f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
-                f"otrzymano {len(evaluated_arguments)}."
-            )
-
         new_context = Context()
 
-        for param, value in zip(function.parameters, evaluated_arguments):
-            if param.type is not None:
-                if not self._check_type_compatibility(value.value, param.type.value): # tu dodałem value.value
-                    raise TypeMismatchError(
-                f"Argument '{param.name}' nie pasuje do typu {param.type} "
-                f"(wartość = {value})."
-            )
+        if type(function) == FunctionDefintion:
+            if (len(evaluated_arguments) != len(function.parameters)) and type(function) == FunctionCall:
+                raise TypeError(
+                    f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
+                    f"otrzymano {len(evaluated_arguments)}."
+                )
 
-                new_context.add_variable(param.name, value.value, self.map_type(param.type))
+            # new_context = Context()
+
+            for param, value in zip(function.parameters, evaluated_arguments):
+                if param.type is not None:
+                    if not self._check_type_compatibility(value.value, param.type.value): # tu dodałem value.value
+                        raise TypeMismatchError(
+                    f"Argument '{param.name}' nie pasuje do typu {param.type} "
+                    f"(wartość = {value})."
+                )
+
+                    new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
 
         self.context_stack.append(new_context)
         self.context = new_context
@@ -511,29 +540,33 @@ class ExecuteVisitor(Visitor):
                 break
 
     def visit_string_type(self, element: StringType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_integer_type(self, element: IntegerType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_bool_type(self, element: BoolType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_float_type(self, element: FloatType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_variant_type(self, element: VariantType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_void_type(self, element: VoidType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_any_type(self, element: AnyType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_dictionary_type(self, element: DictionaryType):
-        self.last_result = self.map_type(element)
+        self.last_result = self.map_object_type_to_vartype(element)
 
+    def visit_built_in_function(self, element):
+        args, method_name = self.additional_args
+        res =  element.function(*args)
+        self.last_result = res
 
 #  Przemyślenia: podobno mona wywalić te wizytacje typów, ale moge
 # je zostawić i zwracać w nich wartość moją np VarType.INT

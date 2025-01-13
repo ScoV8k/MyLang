@@ -1,14 +1,16 @@
 from enum import Enum
+from src.interpreter.typed_value import VarType
 
-class VarType(Enum):
-    INT = "int"
-    FLOAT = "float"
-    BOOL = "bool"
-    STRING = "string"
-    DICT = "dict"
-    ANY = "any"
-    VOID = "void"
-    VARIANT = "variant"
+# class VarType(Enum):
+#     INT = "int"
+#     FLOAT = "float"
+#     BOOL = "bool"
+#     STRING = "string"
+#     DICT = "dict"
+#     ANY = "any"
+#     VOID = "void"
+#     VARIANT = "variant"
+#     NULL = "null"
 
 
 class Variable:

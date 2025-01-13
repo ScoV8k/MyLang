@@ -344,7 +344,7 @@ def test__parse_program_null_value():
     integer_type = IntegerType((1, 1), 'int')
     iden1 = Parameter((1,13), IntegerType((1, 13), 'int'), 'b')
     iden2 = Identifier((1, 34), 'b')
-    assign = Assignment((1, 13), iden1, NullValue((1, 21), 'null'))
+    assign = Assignment((1, 13), iden1, NullValue((1, 21), None))
     ret = ReturnStatement((1, 27), iden2)
     expected_block2 = Block((1, 12), [assign, ret])
     expected_function_def = FunctionDefintion((1, 1), integer_type, 'main', [], expected_block2)
