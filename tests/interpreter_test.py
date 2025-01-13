@@ -417,3 +417,15 @@ def test_type_match_as_identifier2():
     """
     result = execute_code(source_code)
     assert result == 4
+
+
+def test_print():
+    source_code = """
+    int main() {
+        int a = 2;
+        print(a);
+        return 0;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 0

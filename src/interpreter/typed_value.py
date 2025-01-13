@@ -23,8 +23,12 @@ class TypedValue:
     def set_type(self, type):
         self.type = type
 
-
     def __repr__(self):
         return f"Variable(value={self.value}, type={self.type})"
 
+    def __eq__(self, other):
+        if not isinstance(other, TypedValue):
+            return False
+        return (self.value == other.value and 
+                self.type == other.type)
 

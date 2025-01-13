@@ -54,11 +54,33 @@ c = """
 
 d = """
     int main() {
-        int a = not 0;
-        return a;
+        variant something = 12;
+
+        match something {
+            null => {
+                return 123;
+            }
+            _ => {
+                return 999;
+            }
+        }
     }
     """
-source = io.StringIO(d)
+
+test_print = """
+    int main() {
+        int a = 2;
+        print(a);
+        return 0;
+    }
+    """
+test = """
+    dict main() {
+        dict a = {"key": 1};
+        a.get("key");
+    }
+    """
+source = io.StringIO(test)
 error_manager = ErrorManager()
 lexer = Lexer(source, error_manager)
 parser = Parser(lexer, error_manager)

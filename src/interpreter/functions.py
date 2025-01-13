@@ -1,89 +1,34 @@
 import numpy as np
+from src.parser.objects import FunctionDefintion
 
 class BuiltInFunction:
     def __init__(self, function):
         self.function = function
+        self.block = self
 
     def accept(self, visitor):
         visitor.visit_built_in_function(self)
 
-class LambdaFunction(BuiltInFunction):
-    def __init__(self, function):
-        super().__init__(function)
-    
-    def accept(self, visitor):
-        visitor.visit_lambda_function(self)
+def remove(element, key):
+    element.value.pop(key)
 
-class ImportedObject():
-    def __init__(self, obj):
-        self.obj = obj
+def get(element, key):
+    return element.value[key]
 
-    def accept(self, visitor):
-        visitor.visit_imported_object(self)
+def printer(text):
+    print(text.value)
 
-def to_bool(x):
-    return bool(x)
+def add(element, key, value):
+    element.value[key] = value
 
-def to_int(x):
-    return int(x)
-
-def to_float(x):
-    return float(x)
-
-def append(lst, value):
-    lst.value.append(value)
-
-def remove(lst, index):
-    if 0 <= index < len(lst.value):
-        lst.value.pop(index)
-    else:
-        raise IndexError("Index out of range")
-
-def sort(lst):
-    if all(isinstance(i, (int, float)) for i in lst.value):
-        lst.value.sort()
-    else:
-        raise ValueError("List contains non-numeric elements")
-
-def get(lst, index):
-    if 0 <= index < len(lst.value):
-        return lst.value[index]
-    else:
-        raise IndexError("Index out of range")
-
-def where(visitor, lst, name, statements):
-    result = []
-    for item in lst.value:
-        visitor.context.add_variable(name, item)
-        statements.accept(visitor)
-        if visitor.last_result:
-            result.append(item)
-    return result
-
-def foreach(visitor, lst, name, statements):
-    items = []
-    for item in lst.value:
-        visitor.context.add_variable(name, item)
-        statements.accept(visitor)
-        items.append(visitor.context.variables.get(name))
-    return items
-
-def scan(prompt):
-    print(prompt)
-    val = input()
-    return val
+def update(element, key, value):
+    element.value[key] = value
 
 # klasa reprezentująca funkcję wbudowaną
 built_in_functions = {
-    'print': BuiltInFunction(print),
-    'scan': BuiltInFunction(scan),
-    'to_bool': BuiltInFunction(to_bool),
-    'to_int': BuiltInFunction(to_int),
-    'to_float': BuiltInFunction(to_float),
-    'append': BuiltInFunction(append),
+    'print': BuiltInFunction(printer),
     'remove': BuiltInFunction(remove),
-    'sort': BuiltInFunction(sort),
     'get': BuiltInFunction(get),
-    'where': LambdaFunction(where),
-    'foreach': LambdaFunction(foreach)
+    'add': BuiltInFunction(add),
+    'update': BuiltInFunction(update)
 }

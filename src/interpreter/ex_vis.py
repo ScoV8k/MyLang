@@ -4,7 +4,7 @@ from src.errors.interpreter_errors import *
 import numpy as np
 import numbers
 import sys, os
-from src.interpreter.functions import ImportedObject, built_in_functions
+from src.interpreter.functions import built_in_functions
 from src.interpreter.variable import VarType
 from src.interpreter.typed_value import TypedValue
 
@@ -18,6 +18,8 @@ class ExecuteVisitor(Visitor):
         self.return_flag = None
         self.context_stack = [Context()]
         self.context = self.context_stack[-1]
+        self.additional_args = None
+        self.temp_object = None
 
         self.TYPE_MAPPING = {
             IntegerType: VarType.INT, 
@@ -491,6 +493,11 @@ class ExecuteVisitor(Visitor):
         for argument in element.arguments:
             argument.accept(self)  
             evaluated_arguments.append(self.last_result) 
+        
+        if element.function_name != 'print':
+            self.additional_args = [self.temp_object] + evaluated_arguments
+        else:
+            self.additional_args = evaluated_arguments
 
         new_context = Context()
 
@@ -530,8 +537,35 @@ class ExecuteVisitor(Visitor):
 
 
 
-    def visit_object_access(self, element):
-        pass
+    def visit_object_access(self, element: ObjectAccess):
+        """
+        Obsługa wyrażeń typu a.add("key", "value") itp.
+        element.items to lista, której pierwszy element powinien być identyfikatorem
+        (np. 'a'), a kolejne to np. functionCall (np. add("key", "value")).
+        """
+
+        # 1. Najpierw odwiedzamy pierwszy element (bazowy identyfikator).
+        #    Zakładamy, że jest to np. 'a' (Identifier).
+        base_item = element.items[0]
+        base_item.accept(self)
+        current_object = self.last_result  # np. tutaj mamy TypedValue(dict, VarType.DICT)
+
+        # 2. Przechodzimy przez kolejne elementy w element.items.
+        #    Mogą to być identyfikatory (dostęp do atrybutu) lub FunctionCall (wywołanie metody).
+        for item in element.items[1:]:
+            if isinstance(item, Identifier):
+                # Jeśli chcemy pozwolić na dostęp do atrybutów obiektu (np. a.xyz),
+                # można tu obsłużyć np. current_object = current_object.value[item.name]
+                # W zależności od tego, czy chcemy w ogóle takie konstrukcje obsługiwać.
+                # Dla prostoty pominiemy na razie tę część.
+                pass
+
+            elif isinstance(item, FunctionCall):
+                self.temp_object = current_object
+                item.accept(self)
+
+        self.last_result = current_object
+
 
     def visit_block(self, element: Block):
         for statement in element.statements:
@@ -564,9 +598,10 @@ class ExecuteVisitor(Visitor):
         self.last_result = self.map_object_type_to_vartype(element)
 
     def visit_built_in_function(self, element):
-        args, method_name = self.additional_args
+        args = self.additional_args
         res =  element.function(*args)
         self.last_result = res
+
 
 #  Przemyślenia: podobno mona wywalić te wizytacje typów, ale moge
 # je zostawić i zwracać w nich wartość moją np VarType.INT

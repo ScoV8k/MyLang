@@ -20,5 +20,12 @@ class Variable:
     
     def __repr__(self):
         return f"Variable(value={self.value}, type={self.type})"
+    
+    def __eq__(self, other):
+        if not isinstance(other, Variable):
+            return False
+        return (self.value == other.value and 
+                self.type == other.type)
+
 
 
