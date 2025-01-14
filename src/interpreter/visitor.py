@@ -180,3 +180,11 @@ class Visitor(ABC):
     @abstractmethod
     def visit_dictionary_type(self, element):
         pass
+
+    @abstractmethod
+    def visit_break_statement(self, element):
+        pass
+
+    @abstractmethod
+    def visit_declaration(self, element):
+        pass

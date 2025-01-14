@@ -7,7 +7,7 @@ from src.errors.lexer_errors import InvalidTokenError, IdentifierTooLongError, L
 # from src.interpreter.visitor import Visitor
 from src.interpreter.print_visitor import PrintVisitor
 from src.interpreter.interpreter import Interpreter
-from src.interpreter.ex_vis import ExecuteVisitor
+from src.interpreter.execute_visitor import ExecuteVisitor
 import sys
 import io
 
@@ -67,11 +67,13 @@ d = """
     }
     """
 
-test_print = """
+abc = """
     int main() {
-        int a = 2;
-        print(a);
-        return 0;
+        int a = 0;
+        while (a < 5) {
+            a = a + 1;
+        }
+        return a;
     }
     """
 test = """
@@ -80,7 +82,15 @@ test = """
         a.get("key");
     }
     """
-source = io.StringIO(test)
+
+abc = """
+        int main() {
+        int mg = 2;
+        string a = str(mg);
+        print("abc", str(mg));
+        return 0;}
+    """
+source = io.StringIO(abc)
 error_manager = ErrorManager()
 lexer = Lexer(source, error_manager)
 parser = Parser(lexer, error_manager)

@@ -57,16 +57,17 @@ class TypeMismatchError(InterpreterError):
     def __init__(self) -> None:
         super().__init__("Wymagana instrukcja return w funkcji main()")
 
+class DeclarationError(InterpreterError):
+    def __init__(self, variable) -> None:
+        super().__init__(f"Zmienna {variable} została juz zadeklarowana.")
+
+class VariableError(InterpreterError):
+    def __init__(self, variable) -> None:
+        super().__init__(f"Zmienna {variable} została juz zadeklarowana.")
+
 
 class NegationError(InterpreterError):
     def __init__(self, position, type, element) -> None:
         line, column = position
         message = f"NegationError ({line}, {column}): Nie mozna wykonac operacji negacji typu \"{type}\" na elemencie \"{element}\""
         super().__init__(message)
-
-
-# class UnexpectedToken(ParserError):
-#     def __init__(self, token):
-#         line, column = token.position
-#         message = f"UnexpectedToken ({line}, {column}): Niespodziewany token: '{token.value}'."
-#         super().__init__(message)

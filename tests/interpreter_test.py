@@ -4,7 +4,7 @@ from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
 from src.errors.error_manager import ErrorManager
 from src.interpreter.interpreter import Interpreter
-from src.interpreter.ex_vis import ExecuteVisitor
+from src.interpreter.execute_visitor import ExecuteVisitor
 from src.parser.objects import IntegerValue
 
 
@@ -43,12 +43,12 @@ def test_sum_expression():
 
 def test_sum_expression2():
     source_code = """
-    int add(int a, int b) {
+    int sum(int a, int b) {
         return a + b + 10;
     }
 
     int main() {
-        int result = add(10, 20) + 1;
+        int result = sum(10, 20) + 1;
         return result;
     }
     """
@@ -154,12 +154,12 @@ def test_equality_operations():
 
 def test_function_call():
     source_code = """
-    int add(int a, int b) {
+    int sum(int a, int b) {
         return a + b;
     }
 
     int main() {
-        int result = add(10, 20);
+        int result = sum(10, 20);
         return result;
     }
     """
@@ -429,3 +429,264 @@ def test_print():
     """
     result = execute_code(source_code)
     assert result == 0
+
+
+def test_while_basic():
+    source_code = """
+    int main() {
+        int a = 0;
+        while (a < 5) {
+            a = a + 1;
+        }
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 5
+
+
+def test_while_with_break():
+    source_code = """
+    int main() {
+        int a = 0;
+        while (true) {
+            a = a + 1;
+            if (a == 3) {
+                break;
+            }
+        }
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 3
+
+
+def test_while_with_nested_condition():
+    source_code = """
+    int main() {
+        int a = 0;
+        int b = 10;
+        while (a < 5 && b > 5) {
+            a = a + 1;
+            b = b - 1;
+        }
+        return a + b;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 10
+
+
+# def test_while_empty_body():
+#     source_code = """
+#     int main() {
+#         int a = 0;
+#         while (a < 5);
+#         return a;
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 0  # Brak zmiany wartości a
+
+
+# def test_while_complex_expression():
+#     source_code = """
+#     int main() {
+#         int a = 0;
+#         while (a * 2 < 10) {
+#             a = a + 1;
+#         }
+#         return a;
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 5
+
+
+# def test_while_with_mutable_variable():
+#     source_code = """
+#     int main() {
+#         int a = 0;
+#         while (a < 3) {
+#             int b = a + 2;
+#             a = a + 1;
+#         }
+#         return a;
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 3
+
+
+# def test_while_false_condition():
+#     source_code = """
+#     int main() {
+#         int a = 0;
+#         while (false) {
+#             a = a + 1;
+#         }
+#         return a;
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 0
+
+
+# def test_while_true_condition_with_break():
+#     source_code = """
+#     int main() {
+#         int a = 0;
+#         while (true) {
+#             a = a + 1;
+#             if (a >= 10) {
+#                 break;
+#             }
+#         }
+#         return a;
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 10
+
+
+# def test_while_with_continue():
+#     source_code = """
+#     int main() {
+#         int a = 0;
+#         int sum = 0;
+#         while (a < 5) {
+#             a = a + 1;
+#             if (a == 3) {
+#                 continue;
+#             }
+#             sum = sum + a;
+#         }
+#         return sum;
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 12  # 1 + 2 + 4 + 5
+
+
+# def test_type_match_variant_int_typematch_any():
+#     source_code = """
+#     int main() {
+
+#     }
+#     """
+#     result = execute_code(source_code)
+#     assert result == 999
+
+
+def test_basic_declaration_assignment():
+    source_code = """
+    int main() {
+        int x;
+        x = 10;
+        return x;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 10
+
+
+def test_declaration_no_init():
+    source_code = """
+    int main() {
+        int x;
+        return x; 
+    }
+    """
+    result = execute_code(source_code)
+    assert result == None
+
+def test_reassign_variable():
+    source_code = """
+    int main() {
+        int y = 5;
+        y = y + 10;
+        return y;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 15
+
+
+def test_function_parameter_is_by_value():
+    source_code = """
+    int increment(int n) {
+        n = n + 1;
+        return n;
+    }
+
+    int main() {
+        int x = 5;
+        int y = increment(x);
+        return x;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 5
+
+
+def test_function_pass_variable_twice():
+    source_code = """
+    int add_and_increment(int a, int b) {
+        a = a + 1;
+        b = b + 1;
+        return a + b;
+    }
+
+    int main() {
+        int x = 10;
+        int result = add_and_increment(x, x);
+        if (result == 22 && x == 10) {
+            return 1;
+        } else {
+            return 0; 
+        }
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 1
+
+
+def test_print_with_comma_separator():
+    source_code = """
+    int main() {
+        string a = "abc";
+        print("abc", a);
+        return 0;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 0
+
+
+
+def test_print_from_doc():
+    source_code = """
+        void update_text(string text) {
+            text = "new text";
+        }
+        int main() {
+        string message = "original text";
+        update_text(message);
+        print(message);  # original text
+        return 0;}
+    """
+    result = execute_code(source_code)
+    assert result == 0
+
+def test_if_with_type_expr():
+    source_code = """
+        int main() {
+            int a = 42;
+            if (a is int) {
+            return 1;}
+            else {
+            return 2;} }
+    """
+    result = execute_code(source_code)
+    assert result == 1

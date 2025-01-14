@@ -61,7 +61,7 @@ class PrintVisitor(Visitor):
         node.condition.accept(self)
         self._print_indent("Do:")
         self.indent_level += 1
-        for stmt in node.statements:
+        for stmt in node.statements.statements:
             stmt.accept(self)
         self.indent_level -= 1
         self.indent_level -= 1
@@ -85,7 +85,7 @@ class PrintVisitor(Visitor):
     def visit_and_expression(self, node: AndExpression):
         self._print_indent(f"AndExpression at {node.position}")
         self.indent_level += 1
-        for expr in node.nodes:
+        for expr in node.expressions:
             expr.accept(self)
         self.indent_level -= 1
 
@@ -216,6 +216,13 @@ class PrintVisitor(Visitor):
         node.value.accept(self)
         self.indent_level -= 1
 
+    def visit_declaration(self, node: Declaration):
+        self._print_indent(f"Declaration at {node.position}")
+        self.indent_level += 1
+        node.target.accept(self)
+        node.value.accept(self)
+        self.indent_level -= 1
+
     def visit_type_match(self, node: TypeMatch):
         self._print_indent(f"TypeMatch at {node.position}")
         self.indent_level += 1
@@ -277,5 +284,7 @@ class PrintVisitor(Visitor):
     def visit_dictionary_type(self, node: DictionaryType):
         self._print_indent(f"DictionaryType at {node.position}, Value: {node.value}")
 
+    def visit_break_statement(self, node: BreakStatement):
+        self._print_indent(f"BreakStatement at {node.position}")
 
     

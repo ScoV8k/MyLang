@@ -16,6 +16,7 @@ class TokenType(Enum):
     VOID = auto()
     IS = auto()
     NULL = auto()
+    BREAK = auto()
     
     # types
     INT = auto()
@@ -84,6 +85,7 @@ class Symbols:
         "is": TokenType.IS,
         "null": TokenType.NULL,
         "dict": TokenType.DICT,
+        "break": TokenType.BREAK 
     }
 
     chars = {

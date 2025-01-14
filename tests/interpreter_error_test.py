@@ -4,8 +4,9 @@ from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
 from src.errors.error_manager import ErrorManager
 from src.interpreter.interpreter import Interpreter
-from src.interpreter.ex_vis import ExecuteVisitor
+from src.interpreter.execute_visitor import ExecuteVisitor
 from src.errors.parser_errors import InvalidTypeExpression
+from src.errors.interpreter_errors import DeclarationError
 
 
 def execute_code(source_code):
@@ -30,4 +31,16 @@ def test_type_expression_missing_type():
     }
     """
     with pytest.raises(InvalidTypeExpression):
+        execute_code(source_code)
+
+
+def test_redeclaration_error():
+    source_code = """
+    int main() {
+        int a = 10;
+        int a = 20;
+        return a;
+    }
+    """
+    with pytest.raises(DeclarationError):
         execute_code(source_code)

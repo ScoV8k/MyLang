@@ -1,6 +1,6 @@
 from src.lexer.tokens import TokenType, Symbols, Token
 from src.errors.parser_errors import InvalidTypeExpression, DictionaryEntriesError, DictionaryEntryError, ExpectedElseBlockOfStatements, ExpectedForEachBlockOfStatements, ExpectedIfBlockOfStatements, ExpectedWhileBlockOfStatements, InvalidAddExpression, InvalidAndExpression, InvalidArithmeticExpression, InvalidEqualityExpression, InvalidExpression, InvalidLogicExpression, InvalidMultiplicationExpression, InvalidOrExpression, InvalidRelationalExpression, InvalidWhileCondition, NoArgumentExpression, NoBlockInFunctionDefinition, NoBlockInMatchCaseError, NoExpressionInAssignment, NoExpressionInDeclaration, NoForEachExpression, NoFunctionCallInObjectAccess, NoIdentifierAfterAs, NoIdentifierInDeclaration, NoIfCondition, NoTypeMatchExpressionError, UnexpectedToken, BuildingFunctionError, SameParameterError, InvalidParameterError, EmptyBlockOfStatements, UnexpectedTokenType
-from src.parser.objects import NullValue, AndExpression, AnyType, Assignment, Block, BoolType, BoolValue, Dictionary, DictionaryEntry, DictionaryType, DivExpression, EqualityOperation, FloatType, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringType, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, VariantType, VoidType, WhileStatement
+from src.parser.objects import NullValue, AndExpression, Declaration, AnyType, Assignment, Block, BoolType, BoolValue, Dictionary, DictionaryEntry, DictionaryType, DivExpression, BreakStatement, EqualityOperation, FloatType, FloatValue, ForEachStatement, FunctionCall, GreaterEqualOperation, GreaterOperation, Identifier ,IfStatement, IntegerType, IntegerValue, LessEqualOperation, LessOperation, MatchCase, MulExpression, Negation, NotEqualOperation, ObjectAccess, OrExpression, Program, FunctionDefintion, Parameter, RelationalExpression, ReturnStatement, StringType, StringValue, SubExpression, SumExpression, TypeExpression, TypeMatch, VariantType, VoidType, WhileStatement
 from typing import Optional
 import io
 
@@ -59,6 +59,8 @@ class Parser:
 
     def _consume_token(self):
         self.current_token = self.lexer.get_next_token()
+        while self.current_token.type == TokenType.COMMENT:
+            self.current_token = self.lexer.get_next_token()
 
     
     def _check_token_type(self, type):
@@ -130,6 +132,7 @@ class Parser:
             or self._parse_while_loop() \
             or self._parse_for_each_loop() \
             or self._parse_type_match() \
+            or self._parse_break_statement() \
             or self._parse_return_statement():
             return statement
         return None
@@ -142,7 +145,7 @@ class Parser:
         if self._try_consume(TokenType.ASSIGN):
             if not (expression := self._parse_or_expression()):
                 raise NoExpressionInDeclaration(self.current_token)
-            statement = Assignment(position, statement, expression)
+            statement = Declaration(position, statement, expression)
         self._must_be(TokenType.SEMICOLON)
         return statement
 
@@ -209,6 +212,7 @@ class Parser:
         self._must_be(TokenType.RPAREN)
         if not (if_block := self._parse_block()):
             ExpectedIfBlockOfStatements(self.current_token)
+        else_block = None
         if self._try_consume(TokenType.ELSE):
             if not (else_block := self._parse_block()):
                 raise ExpectedElseBlockOfStatements(self.current_token)
@@ -226,6 +230,13 @@ class Parser:
                 raise ExpectedWhileBlockOfStatements(self.current_token)
             return WhileStatement(position, while_condition, while_block)
         return None
+    
+    def _parse_break_statement(self):
+        position = self.current_token.position
+        if not self._try_consume(TokenType.BREAK):
+            return None
+        self._must_be(TokenType.SEMICOLON)
+        return BreakStatement(position)
     
     # for_each_loop ::= "for", "each", "(", identifier, ",", identifier, ")", "in", expression, block ;
     def _parse_for_each_loop(self):

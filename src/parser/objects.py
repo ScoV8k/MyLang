@@ -668,6 +668,25 @@ class Assignment(Node):
     def __str__(self):
         return f"Assignment(Position: {self.position}, Target: {self.target}, Value: {self.value})"
 
+class Declaration(Node):
+    def __init__(self, position, target, value=None):
+        super().__init__(position)
+        self.target = target
+        self.value = value
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_declaration(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, Declaration):
+            return False
+        return (self.target == other.target and 
+                self.value == other.value and
+                self.position == other.position)
+
+    def __str__(self):
+        return f"Declaration(Position: {self.position}, Target: {self.target}, Value: {self.value})"
+
 
 class TypeMatch(Node):
     def __init__(self, position, expression, cases, identifier=None):
@@ -909,3 +928,19 @@ class DictionaryType(Node):
 
     def __str__(self):
         return f"DictionaryType(Position: {self.position}, Value: {self.value})"
+
+
+class BreakStatement(Node):
+    def __init__(self, position) -> None:
+        super().__init__(position)
+
+    def accept(self, visitor: Visitor) -> None:
+        visitor.visit_break_statement(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, BreakStatement):
+            return False
+        return True
+
+    def __str__(self):
+        return f"BreakStatement(Position: {self.position}, Value: {self.value})"

@@ -1,5 +1,6 @@
 import numpy as np
 from src.parser.objects import FunctionDefintion
+from src.interpreter.typed_value import VarType, TypedValue
 
 class BuiltInFunction:
     def __init__(self, function):
@@ -15,8 +16,9 @@ def remove(element, key):
 def get(element, key):
     return element.value[key]
 
-def printer(text):
-    print(text.value)
+def printer(*args):
+    line = " ".join(str(arg.value) for arg in args)
+    print(line)
 
 def add(element, key, value):
     element.value[key] = value
@@ -24,11 +26,16 @@ def add(element, key, value):
 def update(element, key, value):
     element.value[key] = value
 
-# klasa reprezentująca funkcję wbudowaną
+def string(element, value):
+    val = str(value.value)
+    typ = VarType.STRING
+    return TypedValue(val, typ)
+
 built_in_functions = {
     'print': BuiltInFunction(printer),
     'remove': BuiltInFunction(remove),
     'get': BuiltInFunction(get),
     'add': BuiltInFunction(add),
-    'update': BuiltInFunction(update)
+    'update': BuiltInFunction(update),
+    'str': BuiltInFunction(string)
 }

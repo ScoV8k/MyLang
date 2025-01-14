@@ -20,6 +20,8 @@ class ExecuteVisitor(Visitor):
         self.context = self.context_stack[-1]
         self.additional_args = None
         self.temp_object = None
+        self.break_flag = False
+        self.return_value = None
 
         self.TYPE_MAPPING = {
             IntegerType: VarType.INT, 
@@ -62,6 +64,9 @@ class ExecuteVisitor(Visitor):
         if 'main' not in self.functions:
             raise MainFunctionRequired()
         
+        main_call = FunctionCall(self.functions.get('main').position, 'main', [])
+        main_call.accept(self) # wewnątrz wizytacji programu te 2 linijki ta i wyzej
+        
         # main_function = self.functions['main']
         # contains_return = any(isinstance(stmt, ReturnStatement) for stmt in main_function.block.statements)
         # if not contains_return:
@@ -91,6 +96,7 @@ class ExecuteVisitor(Visitor):
         if element.expr is not None:
             element.expr.accept(self)
         self.return_flag = True
+        self.return_value = self.last_result
 
     def visit_identifier(self, element: Identifier):
         self.last_result = self.context.get_variable(element.name)
@@ -99,11 +105,12 @@ class ExecuteVisitor(Visitor):
         
 
     def visit_parameter(self, element):
-        pass
+        var_type = self.map_object_type_to_vartype(element.type)
+        self.context.add_variable(element.name, None, var_type)
 
     def visit_if_statement(self, element: IfStatement):
         element.condition.accept(self)
-        if self.last_result:
+        if self.last_result.value:
             element.statements.accept(self)
         elif element.else_statement:
             element.else_statement.accept(self)
@@ -115,12 +122,13 @@ class ExecuteVisitor(Visitor):
         while self.last_result:
             self.context.reset_flags()
             element.condition.accept(self)
-            if not self.last_result:
+            if not self.last_result.value or self.break_flag:
                 break
             element.statements.accept(self)
-            if self.return_flag:
+            if self.return_flag or self.break_flag:
                 break
         self.context.while_flag -= 1
+        self.break_flag = False
 
     def visit_for_each_statement(self, element):
         pass
@@ -128,19 +136,19 @@ class ExecuteVisitor(Visitor):
     def visit_or_expression(self, element: OrExpression):
         for expr in element.expressions:
             expr.accept(self)
-            if self.last_result: 
-                self.last_result = True
+            if self.last_result.value: 
+                self.last_result.value = True
                 return
-        self.last_result = False
+        self.last_result.value = False
 
 
     def visit_and_expression(self, element: AndExpression):
         for expr in element.expressions:
             expr.accept(self) 
-            if not self.last_result:
-                self.last_result = False
+            if not self.last_result.value:
+                self.last_result.value = False
                 return
-        self.last_result = True
+        self.last_result.value = True
 
     # def visit_type_expression(self, element: TypeExpression):
     #     # Visit the factor
@@ -314,6 +322,11 @@ class ExecuteVisitor(Visitor):
             result_type = VarType.INT
         self.last_result = TypedValue(result_value, result_type)
 
+    def visit_break_statement(self, element: BreakStatement) :
+        if self.context.while_flag == 0:
+            raise RuntimeError(f"Break statement used outside of while loop at position: {element.position}")
+        self.break_flag = True
+        return
 
     def visit_equality_operation(self, element: EqualityOperation):
         element.left.accept(self)
@@ -410,7 +423,97 @@ class ExecuteVisitor(Visitor):
         value = self.last_result 
         self.last_result = (key, value)
 
+    def visit_declaration(self, element: Declaration):
+        """
+        declaration ::= parameter, [ "=", expression ], ";" ;
+        Logika:
+        1. Sprawdź, czy zmienna o podanej nazwie nie istnieje w aktualnym kontekście:
+            - Jeśli istnieje, rzuć błąd.
+        2. Z map_object_type_to_vartype odczytaj docelowy VarType.
+        3. Jeśli jest wyrażenie (element.value), wywołaj je (element.value.accept(self)),
+            a wynik przypisz do zmiennej.
+        4. Dodaj nową zmienną do kontekstu (z wartością i typem).
+        """
 
+        # 1. Pobieramy nazwę zmiennej
+        variable_name = element.target.name
+
+        # 2. Sprawdzamy, czy zmienna już istnieje
+        if self.context.has_variable(variable_name):
+            raise DeclarationError(variable_name)
+
+        # 3. Odczytujemy typ (np. int, float, bool...) z parsera i mapujemy na VarType
+        variable_type = self.map_object_type_to_vartype(element.target.type)
+
+        # 4. Jeżeli mamy wartość po '=', to ją odwiedzamy, żeby ją obliczyć
+        value = None
+        if element.value is not None:
+            element.value.accept(self)
+            value = self.last_result
+        else:
+            # Jeśli nie ma przypisania, można np. ustawić domyślne Null
+            value = TypedValue(None, VarType.NULL)
+
+        # 5. (opcjonalnie) sprawdzamy kompatybilność typów, np.:
+        # if value.type != variable_type and variable_type != VarType.VARIANT:
+        #     raise TypeMismatchError(
+        #         f"Próbowano zadeklarować zmienną typu {variable_type.name}, "
+        #         f"ale wyrażenie ma typ {value.type.name}."
+        #     )
+
+        # 6. Dodajemy zmienną do kontekstu (w zależności od struktury danych w Context)
+        #    - Możesz np. trzymać tam TypedValue, albo osobno value i typ.
+        if value.type == VarType.DICT:
+            # Jeżeli chcesz przechowywać cały TypedValue
+            self.context.add_variable(variable_name, value, variable_type)
+        else:
+            # Jeżeli chcesz przechowywać tylko “surową” wartość, a typ osobno
+            self.context.add_variable(variable_name, value.value, variable_type)
+
+
+    # def visit_assignment(self, element: Assignment):
+    #     """
+    #     assignment ::= obj_access, [ "=", expression ], ";" ;
+    #     Logika:
+    #     1. Sprawdź, czy zmienna już istnieje w kontekście:
+    #         - Jeśli nie istnieje, rzuć błąd.
+    #     2. Odwiedź wyrażenie (element.value), aby uzyskać wartość do przypisania.
+    #     3. Opcjonalnie sprawdź kompatybilność typów z już istniejącym typem zmiennej.
+    #     4. Ustaw wartość w kontekście.
+    #     """
+
+    #     # 1. Pobieramy nazwę zmiennej, do której przypisujemy
+    #     variable_name = element.target.name
+
+    #     # Sprawdzamy, czy zmienna istnieje
+    #     if not self.context.has_variable(variable_name):
+    #         raise NameError(f"Zmienna '{variable_name}' nie została zadeklarowana przed użyciem.")
+
+    #     # 2. Wywołujemy wyrażenie po "=" (jeśli jest), żeby wyliczyć wartość
+    #     if element.value is not None:
+    #         element.value.accept(self)
+    #         value = self.last_result
+    #     else:
+    #         # Jeśli assignment może być bez wartości, ustaw np. None
+    #         # (zwykle w normalnej gramatyce assignment = ...) jest wartość, ale to zależy od języka
+    #         value = TypedValue(None, VarType.NULL)
+
+    #     # 3. (opcjonalnie) sprawdzamy, czy typ jest zgodny z typem zmiennej w kontekście
+    #     existing_var = self.context.get_variable_typed(variable_name)  # Załóżmy, że get_variable_typed zwraca TypedValue
+    #     if existing_var.type != value.type and existing_var.type != VarType.VARIANT:
+    #         # Możesz zdecydować, czy rzutować, czy rzucić błąd
+    #         raise TypeMismatchError(
+    #             f"Niezgodność typów w przypisaniu do '{variable_name}'. "
+    #             f"Oczekiwany: {existing_var.type}, otrzymany: {value.type}."
+    #         )
+
+    #     # 4. Ustawiamy nową wartość w kontekście
+    #     if value.type == VarType.DICT:
+    #         self.context.set_variable(variable_name, value)  # lub value.value, zależy jak przechowujesz
+    #     else:
+    #         self.context.set_variable(variable_name, value.value)
+
+    # assignment ::= obj_access, [ "=", expression ], ";" ;
     def visit_assignment(self, element: Assignment):
         value = None
         if element.value:
@@ -418,16 +521,49 @@ class ExecuteVisitor(Visitor):
         value = self.last_result
 
         variable_name = element.target.name
-        variable_type = self.map_object_type_to_vartype(element.target.type)
-        # if element.target.name not in self.context.variables:
-        #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
-        
-        value_to_set = value if variable_type == VarType.DICT else value.value
+        # if type(element.target) == Identifier: # TUTAJ !!!!!!!!!!!!!!
+        #     variable_type = self.context.get_variable_type(variable_name)
+        # else:
+        #     variable_type = self.map_object_type_to_vartype(element.target.type)
 
+
+        # variable_type = self.map_object_type_to_vartype(element.target.type)
+        # # if element.target.name not in self.context.variables:
+        # #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
+        
+        # value_to_set = value if variable_type == VarType.DICT else value.value
+        value_to_set = value.value
         if variable_name in self.context.variables:
             self.context.set_variable(variable_name, value_to_set)
         else:
             self.context.add_variable(variable_name, value_to_set, variable_type)
+
+    # # declaration ::= parameter, [ "=", expression ], ";" ;
+    # def visit_declaration(self, element: Declaration):
+    #     value = None
+    #     if element.value:
+    #         element.value.accept(self)
+    #     value = self.last_result
+
+    #     variable_name = element.target.name
+    #     # if type(element.target) == Identifier: # TUTAJ !!!!!!!!!!!!!!
+    #     #     variable_type = self.context.get_variable_type(variable_name)
+    #     # else:
+    #     #     variable_type = self.map_object_type_to_vartype(element.target.type)
+
+
+    #     variable_type = self.map_object_type_to_vartype(element.target.type)
+    #     # if element.target.name not in self.context.variables:
+    #     #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
+        
+    #     value_to_set = value if variable_type == VarType.DICT else value.value
+
+    #     if variable_name in self.context.variables:
+    #         self.context.set_variable(variable_name, value_to_set)
+    #     else:
+    #         self.context.add_variable(variable_name, value_to_set, variable_type)
+
+
 
     def visit_type_match(self, element: TypeMatch):
 
@@ -525,7 +661,7 @@ class ExecuteVisitor(Visitor):
 
         try:
             function.block.accept(self)
-
+            self.return_flag = None
             result = self.last_result
 
         finally:
@@ -570,7 +706,7 @@ class ExecuteVisitor(Visitor):
     def visit_block(self, element: Block):
         for statement in element.statements:
             statement.accept(self)
-            if self.return_flag:
+            if self.return_flag or self.break_flag:
                 break
 
     def visit_string_type(self, element: StringType):

@@ -338,9 +338,9 @@ def test_invalid_float_number_format():
 
 
 def test_nested_comments():
-    source_code = "# Comment1\n123 # Comment2\n456"
+    source_code = "# Comment1 123\n123 # Comment2\n456"
     expected_tokens = [
-        Token(TokenType.COMMENT, "# Comment1", (1, 1)),
+        Token(TokenType.COMMENT, "# Comment1 123", (1, 1)),
         Token(TokenType.INTEGER_VALUE, 123, (2, 1)),
         Token(TokenType.COMMENT, "# Comment2", (2, 5)),
         Token(TokenType.INTEGER_VALUE, 456, (3, 1)),

@@ -14,8 +14,8 @@ class VarType(Enum):
 
 class TypedValue:
     def __init__(self, value, var_type: VarType):
-        self.value = value         # rzeczywista wartość
-        self.type = var_type       # typ jako VarType (lub cokolwiek innego)
+        self.value = value      
+        self.type = var_type       
     
     def set_value(self, value):
         self.value = value
