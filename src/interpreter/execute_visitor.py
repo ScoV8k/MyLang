@@ -466,53 +466,6 @@ class ExecuteVisitor(Visitor):
         return False
 
 
-    # def visit_function_call(self, element: FunctionCall):
-    #     if (function := self.functions.get(element.function_name)) is None:
-    #         raise FunctionError(element.function_name)
-
-    #     evaluated_arguments = []
-    #     for argument in element.arguments:
-    #         argument.accept(self)  
-    #         evaluated_arguments.append(self.last_result) 
-        
-    #     if element.function_name != 'print':
-    #         self.additional_args = [self.temp_object] + evaluated_arguments
-    #     else:
-    #         self.additional_args = evaluated_arguments
-
-    #     new_context = Context()
-
-    #     if type(function) == FunctionDefintion:
-    #         if (len(evaluated_arguments) != len(function.parameters)) and type(function) == FunctionCall:
-    #             raise TypeError(
-    #                 f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
-    #                 f"otrzymano {len(evaluated_arguments)}."
-    #             )
-
-    #         for param, value in zip(function.parameters, evaluated_arguments):
-    #             if param.type is not None:
-    #                 if not self._check_type_compatibility(value.value, param.type.value):
-    #                     raise TypeMismatchError(
-    #                 f"Argument '{param.name}' nie pasuje do typu {param.type} "
-    #                 f"(wartość = {value})."
-    #             )
-
-    #                 new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
-
-    #     self.context_stack.append(new_context)
-    #     self.context = new_context
-
-    #     try:
-    #         function.block.accept(self)
-    #         self.return_flag = None
-    #         result = self.last_result
-
-    #     finally:
-    #         self.context_stack.pop()
-    #         self.context = self.context_stack[-1]
-
-    #     self.last_result = result
-
     def visit_function_call(self, element: FunctionCall):
         if (function := self.functions.get(element.function_name)) is None:
             raise FunctionError(element.function_name)
