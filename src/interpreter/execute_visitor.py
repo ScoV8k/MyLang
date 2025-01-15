@@ -101,7 +101,6 @@ class ExecuteVisitor(Visitor):
     def visit_identifier(self, element: Identifier):
         self.last_result = self.context.get_variable(element.name)
         self.last_result_type = self.context.get_variable_type(element.name)
-        # nie zwracamy typu
         
 
     def visit_parameter(self, element):
@@ -130,8 +129,23 @@ class ExecuteVisitor(Visitor):
         self.context.while_flag -= 1
         self.break_flag = False
 
-    def visit_for_each_statement(self, element):
-        pass
+
+    def visit_for_each_statement(self, element: ForEachStatement):
+        element.struct.accept(self)
+
+        dict_value = self.last_result  
+        if dict_value.type != VarType.DICT:
+            raise InterpreterError(
+                f"Pętla 'for each' wymaga słownika, otrzymano typ: {dict_value.type}."
+            )
+        for current_key, current_value in dict_value.value.items():
+            self.context.set_variable(element.key, current_key)
+            self.context.set_variable(element.value, current_value)
+            element.statements.accept(self)
+            if self.break_flag or self.return_flag:
+                break
+        self.break_flag = False
+
 
     def visit_or_expression(self, element: OrExpression):
         for expr in element.expressions:
@@ -410,8 +424,8 @@ class ExecuteVisitor(Visitor):
         for entry in element.dictionary_entries:
             entry.accept(self)
             key, value = self.last_result
-            if key in dictionary_result:
-                raise KeyError(f"Klucz '{key}' został już zdefiniowany w słowniku.")
+            # if key in dictionary_result:
+            #     raise KeyError(f"Klucz '{key}' został już zdefiniowany w słowniku.")
             dictionary_result[key] = value
         self.last_result = dictionary_result
 
@@ -424,28 +438,13 @@ class ExecuteVisitor(Visitor):
         self.last_result = (key, value)
 
     def visit_declaration(self, element: Declaration):
-        """
-        declaration ::= parameter, [ "=", expression ], ";" ;
-        Logika:
-        1. Sprawdź, czy zmienna o podanej nazwie nie istnieje w aktualnym kontekście:
-            - Jeśli istnieje, rzuć błąd.
-        2. Z map_object_type_to_vartype odczytaj docelowy VarType.
-        3. Jeśli jest wyrażenie (element.value), wywołaj je (element.value.accept(self)),
-            a wynik przypisz do zmiennej.
-        4. Dodaj nową zmienną do kontekstu (z wartością i typem).
-        """
 
-        # 1. Pobieramy nazwę zmiennej
         variable_name = element.target.name
 
-        # 2. Sprawdzamy, czy zmienna już istnieje
         if self.context.has_variable(variable_name):
             raise DeclarationError(variable_name)
-
-        # 3. Odczytujemy typ (np. int, float, bool...) z parsera i mapujemy na VarType
         variable_type = self.map_object_type_to_vartype(element.target.type)
 
-        # 4. Jeżeli mamy wartość po '=', to ją odwiedzamy, żeby ją obliczyć
         value = None
         if element.value is not None:
             element.value.accept(self)
@@ -463,7 +462,7 @@ class ExecuteVisitor(Visitor):
 
         # 6. Dodajemy zmienną do kontekstu (w zależności od struktury danych w Context)
         #    - Możesz np. trzymać tam TypedValue, albo osobno value i typ.
-        if value.type == VarType.DICT:
+        if variable_type == VarType.DICT:
             # Jeżeli chcesz przechowywać cały TypedValue
             self.context.add_variable(variable_name, value, variable_type)
         else:

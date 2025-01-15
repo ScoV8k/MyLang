@@ -84,11 +84,12 @@ test = """
     """
 
 abc = """
-        int main() {
-        int mg = 2;
-        string a = str(mg);
-        print("abc", str(mg));
-        return 0;}
+    int main() {
+        dict a = {"key": 1};
+        for each (key, value) in a {
+        print(key);}
+        return 0; 
+        }
     """
 source = io.StringIO(abc)
 error_manager = ErrorManager()

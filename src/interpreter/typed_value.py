@@ -32,3 +32,8 @@ class TypedValue:
         return (self.value == other.value and 
                 self.type == other.type)
 
+    def __hash__(self):
+        # Zakładając, że self.value i self.type są same w sobie
+        # haszowalne (np. self.value to int, float, str, bool lub None)
+        # można zrobić wprost:
+        return hash((self.value, self.type))

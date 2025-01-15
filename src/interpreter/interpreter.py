@@ -37,7 +37,8 @@ class Context:
     
     def set_variable(self, name, value):
         if name not in self.variables:
-            raise VariableError(name)
+            self.add_variable(name, value, value.type)
+        #     raise VariableError(name)
         self.variables[name].value = value
 
     def new_context(self):
