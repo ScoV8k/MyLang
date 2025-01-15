@@ -1,9 +1,6 @@
 from src.parser.objects import *
 from src.interpreter.interpreter import Context
 from src.errors.interpreter_errors import *
-import numpy as np
-import numbers
-import sys, os
 from src.interpreter.functions import built_in_functions
 from src.interpreter.variable import VarType
 from src.interpreter.typed_value import TypedValue
@@ -22,6 +19,7 @@ class ExecuteVisitor(Visitor):
         self.temp_object = None
         self.break_flag = False
         self.return_value = None
+        self.recursion_limit = recursion_limit
 
         self.TYPE_MAPPING = {
             IntegerType: VarType.INT, 
@@ -41,7 +39,7 @@ class ExecuteVisitor(Visitor):
             dict: VarType.DICT,
             
         }
-            
+        
     def map_object_type_to_vartype(self, parser_type):
         result = self.TYPE_MAPPING.get(type(parser_type))
         return result
@@ -65,26 +63,13 @@ class ExecuteVisitor(Visitor):
             raise MainFunctionRequired()
         
         main_call = FunctionCall(self.functions.get('main').position, 'main', [])
-        main_call.accept(self) # wewnątrz wizytacji programu te 2 linijki ta i wyzej
-        
-        # main_function = self.functions['main']
-        # contains_return = any(isinstance(stmt, ReturnStatement) for stmt in main_function.block.statements)
-        # if not contains_return:
-        #     raise ReturnInMainFunctionRequired
+        main_call.accept(self)        
 
 
     def visit_function_definition(self, element: FunctionDefintion):
         for param in element.parameters:
             param.accept(self)
-        
-        # if element.name == "main":
-        #     contains_return = any(isinstance(stmt, ReturnStatement) for stmt in element.block.statements)
-        #     if not contains_return:
-        #         raise InterpreterError("Funkcja 'main' musi zawierać instrukcję 'return'.")
-
         element.block.accept(self)
-        # weryfikacja flagi return i typu funkcji bo void nie ma inne maja i reset flagi return
-
 
 
     def visit_function_arguments(self, element):
@@ -117,9 +102,7 @@ class ExecuteVisitor(Visitor):
 
     def visit_while_statement(self, element: WhileStatement):
         self.context.while_flag += 1
-        element.condition.accept(self)
         while self.last_result:
-            self.context.reset_flags()
             element.condition.accept(self)
             if not self.last_result.value or self.break_flag:
                 break
@@ -128,6 +111,7 @@ class ExecuteVisitor(Visitor):
                 break
         self.context.while_flag -= 1
         self.break_flag = False
+
 
 
     def visit_for_each_statement(self, element: ForEachStatement):
@@ -164,43 +148,23 @@ class ExecuteVisitor(Visitor):
                 return
         self.last_result.value = True
 
-    # def visit_type_expression(self, element: TypeExpression):
-    #     # Visit the factor
-    #     element.factor.accept(self)
-    #     factor_value = self.last_result
-
-    #     if element.factor.name:
-    #         factor_value = self.context.get_variable(element.factor.type)
-    #     # If a type is provided, check compatibility
-    #     if element.type:
-    #         element.type.accept(self)
-    #         type_value = self.last_result
-
-    #         # Check if the factor matches the type
-    #         if not self._check_type_compatibility(factor_value, type_value):
-    #             raise TypeMismatchError(f"Wartość '{factor_value}' nie pasuje do typu '{type_value}'.")
-
-    #     self.last_result = factor_value
-
     def visit_type_expression(self, element: TypeExpression):
         if isinstance(element.factor, Identifier):
             var_name = element.factor.name
             variable = self.context.get_variable(var_name)
             if element.type:
-
                 self.last_result = TypedValue((variable.type == self.map_object_type_to_vartype(element.type)), VarType.BOOL)
             else:
-                self.last_result = variable.type # nie wiem co dokładnie tutaj abc is (i tu nic nie ma?)
+                self.last_result = variable.type
 
         else:
             element.factor.accept(self)
             factor_value = self.last_result
 
             if element.type:
-                # element.type.accept(self)
                 self.last_result = TypedValue(self._check_type_compatibility(factor_value, element.type), VarType.BOOL)
             else:
-                self.last_result = factor_value # tez chyba nie mozliwe
+                self.last_result = factor_value
 
 
 
@@ -214,25 +178,13 @@ class ExecuteVisitor(Visitor):
         elif type_str == "string":
             return isinstance(value, str)
         else:
-            # Jeśli trafi się coś spoza tych typów, domyślnie False
             return False
-
-    # def visit_negation(self, element: Negation):
-    #     element.node.accept(self)
-    #     if element.negation_type == "logic" and isinstance(self.last_result, bool):
-    #         self.last_result = not self.last_result
-    #     elif element.negation_type == "arithmetic" and isinstance(self.last_result, (int, float)):
-    #         self.last_result = - self.last_result
-    #     else:
-    #         raise NegationError(element.position,element.negation_type, self.last_result)
 
     def visit_negation(self, element: Negation):
         element.node.accept(self)
         if element.negation_type == "logic":
-            # self.last_result = not self.last_result
             self.last_result.set_value(not self.last_result.value)
         elif element.negation_type == "arithmetic":
-            # self.last_result = - self.last_result
             self.last_result.set_value(- self.last_result.value)
         else:
             raise NegationError(element.position,element.negation_type, self.last_result)
@@ -257,9 +209,8 @@ class ExecuteVisitor(Visitor):
         self.last_result = TypedValue(result_value, result_type)
 
     def visit_sub_expression(self, element: SubExpression):
-        # 1. Odwiedzamy lewe wyrażenie
         element.left.accept(self)
-        left_var = self.last_result  # to jest Variable
+        left_var = self.last_result
         if not isinstance(left_var.value, (int, float)):
             raise TypeError(
                 f"Lewy operand '-' musi być liczbą, otrzymano: {type(left_var.value).__name__}."
@@ -293,7 +244,6 @@ class ExecuteVisitor(Visitor):
 
         if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
             result_value = left_value * right_value
-            # wynik jest float, jeśli któryś operand to float
             if left_var.type == VarType.FLOAT or right_var.type == VarType.FLOAT:
                 result_type = VarType.FLOAT
             else:
@@ -400,16 +350,12 @@ class ExecuteVisitor(Visitor):
 
 
     def visit_bool_value(self, element: BoolValue):
-        # self.last_result = element.value
         self.last_result = TypedValue(element.value, VarType.BOOL)
 
     def visit_integer_value(self, element: IntegerValue):
-        # self.last_result = element.value
         self.last_result = TypedValue(element.value, VarType.INT)
-        # self.last_result = 1
 
     def visit_float_value(self, element: FloatValue):
-        # self.last_result = element.value
         self.last_result = TypedValue(element.value, VarType.FLOAT)
 
     def visit_string_value(self, element: StringValue):
@@ -424,8 +370,6 @@ class ExecuteVisitor(Visitor):
         for entry in element.dictionary_entries:
             entry.accept(self)
             key, value = self.last_result
-            # if key in dictionary_result:
-            #     raise KeyError(f"Klucz '{key}' został już zdefiniowany w słowniku.")
             dictionary_result[key] = value
         self.last_result = dictionary_result
 
@@ -437,80 +381,25 @@ class ExecuteVisitor(Visitor):
         value = self.last_result 
         self.last_result = (key, value)
 
-    def visit_declaration(self, element: Declaration):
 
+    def visit_declaration(self, element: Declaration):
         variable_name = element.target.name
 
         if self.context.has_variable(variable_name):
             raise DeclarationError(variable_name)
+
         variable_type = self.map_object_type_to_vartype(element.target.type)
 
-        value = None
         if element.value is not None:
             element.value.accept(self)
-            value = self.last_result
+            evaluated_value = self.last_result
         else:
-            # Jeśli nie ma przypisania, można np. ustawić domyślne Null
-            value = TypedValue(None, VarType.NULL)
+            evaluated_value = TypedValue(None, VarType.NULL)
+        to_store = evaluated_value if variable_type == VarType.DICT else evaluated_value.value
 
-        # 5. (opcjonalnie) sprawdzamy kompatybilność typów, np.:
-        # if value.type != variable_type and variable_type != VarType.VARIANT:
-        #     raise TypeMismatchError(
-        #         f"Próbowano zadeklarować zmienną typu {variable_type.name}, "
-        #         f"ale wyrażenie ma typ {value.type.name}."
-        #     )
-
-        # 6. Dodajemy zmienną do kontekstu (w zależności od struktury danych w Context)
-        #    - Możesz np. trzymać tam TypedValue, albo osobno value i typ.
-        if variable_type == VarType.DICT:
-            # Jeżeli chcesz przechowywać cały TypedValue
-            self.context.add_variable(variable_name, value, variable_type)
-        else:
-            # Jeżeli chcesz przechowywać tylko “surową” wartość, a typ osobno
-            self.context.add_variable(variable_name, value.value, variable_type)
+        self.context.add_variable(variable_name, to_store, variable_type)
 
 
-    # def visit_assignment(self, element: Assignment):
-    #     """
-    #     assignment ::= obj_access, [ "=", expression ], ";" ;
-    #     Logika:
-    #     1. Sprawdź, czy zmienna już istnieje w kontekście:
-    #         - Jeśli nie istnieje, rzuć błąd.
-    #     2. Odwiedź wyrażenie (element.value), aby uzyskać wartość do przypisania.
-    #     3. Opcjonalnie sprawdź kompatybilność typów z już istniejącym typem zmiennej.
-    #     4. Ustaw wartość w kontekście.
-    #     """
-
-    #     # 1. Pobieramy nazwę zmiennej, do której przypisujemy
-    #     variable_name = element.target.name
-
-    #     # Sprawdzamy, czy zmienna istnieje
-    #     if not self.context.has_variable(variable_name):
-    #         raise NameError(f"Zmienna '{variable_name}' nie została zadeklarowana przed użyciem.")
-
-    #     # 2. Wywołujemy wyrażenie po "=" (jeśli jest), żeby wyliczyć wartość
-    #     if element.value is not None:
-    #         element.value.accept(self)
-    #         value = self.last_result
-    #     else:
-    #         # Jeśli assignment może być bez wartości, ustaw np. None
-    #         # (zwykle w normalnej gramatyce assignment = ...) jest wartość, ale to zależy od języka
-    #         value = TypedValue(None, VarType.NULL)
-
-    #     # 3. (opcjonalnie) sprawdzamy, czy typ jest zgodny z typem zmiennej w kontekście
-    #     existing_var = self.context.get_variable_typed(variable_name)  # Załóżmy, że get_variable_typed zwraca TypedValue
-    #     if existing_var.type != value.type and existing_var.type != VarType.VARIANT:
-    #         # Możesz zdecydować, czy rzutować, czy rzucić błąd
-    #         raise TypeMismatchError(
-    #             f"Niezgodność typów w przypisaniu do '{variable_name}'. "
-    #             f"Oczekiwany: {existing_var.type}, otrzymany: {value.type}."
-    #         )
-
-    #     # 4. Ustawiamy nową wartość w kontekście
-    #     if value.type == VarType.DICT:
-    #         self.context.set_variable(variable_name, value)  # lub value.value, zależy jak przechowujesz
-    #     else:
-    #         self.context.set_variable(variable_name, value.value)
 
     # assignment ::= obj_access, [ "=", expression ], ";" ;
     def visit_assignment(self, element: Assignment):
@@ -520,52 +409,15 @@ class ExecuteVisitor(Visitor):
         value = self.last_result
 
         variable_name = element.target.name
-        # if type(element.target) == Identifier: # TUTAJ !!!!!!!!!!!!!!
-        #     variable_type = self.context.get_variable_type(variable_name)
-        # else:
-        #     variable_type = self.map_object_type_to_vartype(element.target.type)
 
-
-        # variable_type = self.map_object_type_to_vartype(element.target.type)
-        # # if element.target.name not in self.context.variables:
-        # #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
-        
-        # value_to_set = value if variable_type == VarType.DICT else value.value
         value_to_set = value.value
         if variable_name in self.context.variables:
             self.context.set_variable(variable_name, value_to_set)
         else:
-            self.context.add_variable(variable_name, value_to_set, variable_type)
-
-    # # declaration ::= parameter, [ "=", expression ], ";" ;
-    # def visit_declaration(self, element: Declaration):
-    #     value = None
-    #     if element.value:
-    #         element.value.accept(self)
-    #     value = self.last_result
-
-    #     variable_name = element.target.name
-    #     # if type(element.target) == Identifier: # TUTAJ !!!!!!!!!!!!!!
-    #     #     variable_type = self.context.get_variable_type(variable_name)
-    #     # else:
-    #     #     variable_type = self.map_object_type_to_vartype(element.target.type)
-
-
-    #     variable_type = self.map_object_type_to_vartype(element.target.type)
-    #     # if element.target.name not in self.context.variables:
-    #     #     raise NameError(f"Zmienna '{element.name}' nie została zadeklarowana.")
-        
-    #     value_to_set = value if variable_type == VarType.DICT else value.value
-
-    #     if variable_name in self.context.variables:
-    #         self.context.set_variable(variable_name, value_to_set)
-    #     else:
-    #         self.context.add_variable(variable_name, value_to_set, variable_type)
-
+            raise AssignmentError(variable_name)
 
 
     def visit_type_match(self, element: TypeMatch):
-
         element.expression.accept(self)
         expr_value = self.last_result  
 
@@ -584,9 +436,7 @@ class ExecuteVisitor(Visitor):
 
 
     def visit_match_case(self, case: MatchCase, expr_value):
-
         match_case_type = case.type
-            
         # if isinstance(match_case_type, VoidType) and match_case_type.value == "null":
         #     if expr_value.type == VarType.VARIANT:
         #         case.block.accept(self)
@@ -597,7 +447,6 @@ class ExecuteVisitor(Visitor):
         #     # '_' pasuje do wszystkiego
         #     case.block.accept(self)
         #     return True
-
 
         # # match_case_type.accept(self)
 
@@ -617,13 +466,57 @@ class ExecuteVisitor(Visitor):
         return False
 
 
-    def visit_function_call(self, element: FunctionCall):
-        if element.function_name not in self.functions:
-            raise NameError(f"Funkcja '{element.function_name}' nie została zadeklarowana.")
-        # coś w tym miejscu powiedział e ma być get powyej bo 2 razy robie potem z tym co jest ponizej function =
-        #     tak jak to ma być ->  if (type := self.TYPE_MAPPING.get(self.current_token.type)):
-        function = self.functions[element.function_name]
+    # def visit_function_call(self, element: FunctionCall):
+    #     if (function := self.functions.get(element.function_name)) is None:
+    #         raise FunctionError(element.function_name)
 
+    #     evaluated_arguments = []
+    #     for argument in element.arguments:
+    #         argument.accept(self)  
+    #         evaluated_arguments.append(self.last_result) 
+        
+    #     if element.function_name != 'print':
+    #         self.additional_args = [self.temp_object] + evaluated_arguments
+    #     else:
+    #         self.additional_args = evaluated_arguments
+
+    #     new_context = Context()
+
+    #     if type(function) == FunctionDefintion:
+    #         if (len(evaluated_arguments) != len(function.parameters)) and type(function) == FunctionCall:
+    #             raise TypeError(
+    #                 f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
+    #                 f"otrzymano {len(evaluated_arguments)}."
+    #             )
+
+    #         for param, value in zip(function.parameters, evaluated_arguments):
+    #             if param.type is not None:
+    #                 if not self._check_type_compatibility(value.value, param.type.value):
+    #                     raise TypeMismatchError(
+    #                 f"Argument '{param.name}' nie pasuje do typu {param.type} "
+    #                 f"(wartość = {value})."
+    #             )
+
+    #                 new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
+
+    #     self.context_stack.append(new_context)
+    #     self.context = new_context
+
+    #     try:
+    #         function.block.accept(self)
+    #         self.return_flag = None
+    #         result = self.last_result
+
+    #     finally:
+    #         self.context_stack.pop()
+    #         self.context = self.context_stack[-1]
+
+    #     self.last_result = result
+
+    def visit_function_call(self, element: FunctionCall):
+        if (function := self.functions.get(element.function_name)) is None:
+            raise FunctionError(element.function_name)
+        
         evaluated_arguments = []
         for argument in element.arguments:
             argument.accept(self)  
@@ -636,24 +529,24 @@ class ExecuteVisitor(Visitor):
 
         new_context = Context()
 
-        if type(function) == FunctionDefintion:
-            if (len(evaluated_arguments) != len(function.parameters)) and type(function) == FunctionCall:
+        if len(self.context_stack) >= self.recursion_limit:
+            raise RecursionError(f"Recursion limit of {self.recursion_limit} reached. "
+                                f"Possibly infinite recursion or too deeply nested calls.")
+        if isinstance(function, FunctionDefintion):
+            if len(evaluated_arguments) != len(function.parameters):
                 raise TypeError(
                     f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
                     f"otrzymano {len(evaluated_arguments)}."
                 )
 
-            # new_context = Context()
-
             for param, value in zip(function.parameters, evaluated_arguments):
                 if param.type is not None:
-                    if not self._check_type_compatibility(value.value, param.type.value): # tu dodałem value.value
+                    if not self._check_type_compatibility(value.value, param.type.value):
                         raise TypeMismatchError(
-                    f"Argument '{param.name}' nie pasuje do typu {param.type} "
-                    f"(wartość = {value})."
-                )
-
-                    new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
+                            f"Argument '{param.name}' nie pasuje do typu {param.type} "
+                            f"(wartość = {value})."
+                        )
+                new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
 
         self.context_stack.append(new_context)
         self.context = new_context
@@ -662,44 +555,25 @@ class ExecuteVisitor(Visitor):
             function.block.accept(self)
             self.return_flag = None
             result = self.last_result
-
         finally:
             self.context_stack.pop()
             self.context = self.context_stack[-1]
-
-        # Zwracamy wynik funkcji
         self.last_result = result
 
 
 
     def visit_object_access(self, element: ObjectAccess):
-        """
-        Obsługa wyrażeń typu a.add("key", "value") itp.
-        element.items to lista, której pierwszy element powinien być identyfikatorem
-        (np. 'a'), a kolejne to np. functionCall (np. add("key", "value")).
-        """
-
-        # 1. Najpierw odwiedzamy pierwszy element (bazowy identyfikator).
-        #    Zakładamy, że jest to np. 'a' (Identifier).
         base_item = element.items[0]
         base_item.accept(self)
-        current_object = self.last_result  # np. tutaj mamy TypedValue(dict, VarType.DICT)
+        current_object = self.last_result
 
-        # 2. Przechodzimy przez kolejne elementy w element.items.
-        #    Mogą to być identyfikatory (dostęp do atrybutu) lub FunctionCall (wywołanie metody).
         for item in element.items[1:]:
             if isinstance(item, Identifier):
-                # Jeśli chcemy pozwolić na dostęp do atrybutów obiektu (np. a.xyz),
-                # można tu obsłużyć np. current_object = current_object.value[item.name]
-                # W zależności od tego, czy chcemy w ogóle takie konstrukcje obsługiwać.
-                # Dla prostoty pominiemy na razie tę część.
-                pass
+                raise IdentifierInObjectAccessError(item.name)
 
             elif isinstance(item, FunctionCall):
                 self.temp_object = current_object
                 item.accept(self)
-
-        self.last_result = current_object
 
 
     def visit_block(self, element: Block):
@@ -736,15 +610,3 @@ class ExecuteVisitor(Visitor):
         args = self.additional_args
         res =  element.function(*args)
         self.last_result = res
-
-
-#  Przemyślenia: podobno mona wywalić te wizytacje typów, ale moge
-# je zostawić i zwracać w nich wartość moją np VarType.INT
-
-# jestem w trakcie zmieniania tych typów, mój pomysł jest taki eby i visit_int_type zwracało variable
-
-# Na przykładzie sum expression moe być zwrócony albo iden albo value
-# dlatego visit_int_value musi zwracac variable i ident te zwróci variable
-
-
-#zmienilem naraxie tylko sum_expr:         left_value = self.last_result.value i 

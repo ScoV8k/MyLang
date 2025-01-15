@@ -65,6 +65,17 @@ class VariableError(InterpreterError):
     def __init__(self, variable) -> None:
         super().__init__(f"Zmienna {variable} została juz zadeklarowana.")
 
+class AssignmentError(InterpreterError):
+    def __init__(self, variable) -> None:
+        super().__init__(f"Zmienna {variable} nie została wcześniej zadeklarowana.")
+
+class FunctionError(InterpreterError):
+    def __init__(self, variable) -> None:
+        super().__init__(f"Funkcja {variable} nie została wcześniej zadeklarowana.")
+
+class IdentifierInObjectAccessError(InterpreterError):
+    def __init__(self, name) -> None:
+        super().__init__(f"Nie można wywołać dostępu do zmiennej {name} w ten sposób")
 
 class NegationError(InterpreterError):
     def __init__(self, position, type, element) -> None:

@@ -478,105 +478,52 @@ def test_while_with_nested_condition():
     assert result == 10
 
 
-# def test_while_empty_body():
-#     source_code = """
-#     int main() {
-#         int a = 0;
-#         while (a < 5);
-#         return a;
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 0  # Brak zmiany wartości a
+
+def test_while_complex_expression():
+    source_code = """
+    int main() {
+        int a = 0;
+        while (a * 2 < 10) {
+            a = a + 1;
+        }
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 5
 
 
-# def test_while_complex_expression():
-#     source_code = """
-#     int main() {
-#         int a = 0;
-#         while (a * 2 < 10) {
-#             a = a + 1;
-#         }
-#         return a;
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 5
+
+def test_while_false_condition():
+    source_code = """
+    int main() {
+        int a = 0;
+        while (false) {
+            a = a + 1;
+        }
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 0
 
 
-# def test_while_with_mutable_variable():
-#     source_code = """
-#     int main() {
-#         int a = 0;
-#         while (a < 3) {
-#             int b = a + 2;
-#             a = a + 1;
-#         }
-#         return a;
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 3
+def test_while_true_condition_with_break():
+    source_code = """
+    int main() {
+        int a = 0;
+        while (true) {
+            a = a + 1;
+            if (a >= 10) {
+                break;
+            }
+        }
+        return a;
+    }
+    """
+    result = execute_code(source_code)
+    assert result == 10
 
-
-# def test_while_false_condition():
-#     source_code = """
-#     int main() {
-#         int a = 0;
-#         while (false) {
-#             a = a + 1;
-#         }
-#         return a;
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 0
-
-
-# def test_while_true_condition_with_break():
-#     source_code = """
-#     int main() {
-#         int a = 0;
-#         while (true) {
-#             a = a + 1;
-#             if (a >= 10) {
-#                 break;
-#             }
-#         }
-#         return a;
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 10
-
-
-# def test_while_with_continue():
-#     source_code = """
-#     int main() {
-#         int a = 0;
-#         int sum = 0;
-#         while (a < 5) {
-#             a = a + 1;
-#             if (a == 3) {
-#                 continue;
-#             }
-#             sum = sum + a;
-#         }
-#         return sum;
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 12  # 1 + 2 + 4 + 5
-
-
-# def test_type_match_variant_int_typematch_any():
-#     source_code = """
-#     int main() {
-
-#     }
-#     """
-#     result = execute_code(source_code)
-#     assert result == 999
 
 
 def test_basic_declaration_assignment():
@@ -690,3 +637,4 @@ def test_if_with_type_expr():
     """
     result = execute_code(source_code)
     assert result == 1
+

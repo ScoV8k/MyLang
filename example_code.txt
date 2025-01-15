@@ -1,0 +1,4 @@
+dict main() {
+    dict a = {"key": 1};
+    return a; 
+    }
