@@ -63,7 +63,10 @@ class DeclarationError(InterpreterError):
 
 class VariableError(InterpreterError):
     def __init__(self, variable) -> None:
-        super().__init__(f"Zmienna {variable} została juz zadeklarowana.")
+        super().__init__(f"Zmienna {variable} nie została juz zadeklarowana.")
+
+# dodać drugi jak jest jak nie ma 
+
 
 class AssignmentError(InterpreterError):
     def __init__(self, variable) -> None:

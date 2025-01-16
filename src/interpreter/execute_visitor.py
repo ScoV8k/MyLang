@@ -63,13 +63,44 @@ class ExecuteVisitor(Visitor):
             raise MainFunctionRequired()
         
         main_call = FunctionCall(self.functions.get('main').position, 'main', [])
-        main_call.accept(self)        
+        main_call.accept(self)       
 
 
-    def visit_function_definition(self, element: FunctionDefintion):
-        for param in element.parameters:
-            param.accept(self)
-        element.block.accept(self)
+    def visit_function_definition(self, function: FunctionDefintion):
+        new_context = Context()
+        if len(self.context_stack) >= self.recursion_limit:
+            raise RecursionError(f"Recursion limit of {self.recursion_limit} reached. "
+                                f"Possibly infinite recursion or too deeply nested calls.")
+        # if isinstance(function, FunctionDefintion):
+        if len(self.additional_args) != len(function.parameters):
+            raise TypeError(
+                f"Funkcja '{function.function_name}' oczekuje {len(function.parameters)} argumentów, "
+                f"otrzymano {len(self.additional_args)}."
+            )
+
+        for param, value in zip(function.parameters, self.additional_args):
+            if param.type is not None:
+                if not self._check_type_compatibility(value.value, param.type.value):
+                    raise TypeMismatchError(
+                        f"Argument '{param.name}' nie pasuje do typu {param.type} "
+                        f"(wartość = {value})."
+                    )
+            new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
+
+        self.context_stack.append(new_context)
+        self.context = new_context
+
+        try:
+            function.block.accept(self)
+            self.return_flag = None
+            result = self.last_result
+        finally:
+            self.context_stack.pop()
+            self.context = self.context_stack[-1]
+        self.last_result = result
+        # for param in element.parameters:
+        #     param.accept(self)
+        # function.block.accept(self)
 
 
     def visit_function_arguments(self, element):
@@ -473,45 +504,45 @@ class ExecuteVisitor(Visitor):
         evaluated_arguments = []
         for argument in element.arguments:
             argument.accept(self)  
-            evaluated_arguments.append(self.last_result) 
-        
-        if element.function_name != 'print':
+            evaluated_arguments.append(self.last_result) # dodaj(1, void fun()) 
+        # resetujemy zawsze last_result po przypisani/wykozystaniu
+        if self.temp_object:
             self.additional_args = [self.temp_object] + evaluated_arguments
         else:
             self.additional_args = evaluated_arguments
+        function.accept(self)
+        # new_context = Context()
 
-        new_context = Context()
+        # if len(self.context_stack) >= self.recursion_limit:
+        #     raise RecursionError(f"Recursion limit of {self.recursion_limit} reached. "
+        #                         f"Possibly infinite recursion or too deeply nested calls.")
+        # if isinstance(function, FunctionDefintion):
+        #     if len(evaluated_arguments) != len(function.parameters):
+        #         raise TypeError(
+        #             f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
+        #             f"otrzymano {len(evaluated_arguments)}."
+        #         )
 
-        if len(self.context_stack) >= self.recursion_limit:
-            raise RecursionError(f"Recursion limit of {self.recursion_limit} reached. "
-                                f"Possibly infinite recursion or too deeply nested calls.")
-        if isinstance(function, FunctionDefintion):
-            if len(evaluated_arguments) != len(function.parameters):
-                raise TypeError(
-                    f"Funkcja '{element.function_name}' oczekuje {len(function.parameters)} argumentów, "
-                    f"otrzymano {len(evaluated_arguments)}."
-                )
+        #     for param, value in zip(function.parameters, evaluated_arguments):
+        #         if param.type is not None:
+        #             if not self._check_type_compatibility(value.value, param.type.value):
+        #                 raise TypeMismatchError(
+        #                     f"Argument '{param.name}' nie pasuje do typu {param.type} "
+        #                     f"(wartość = {value})."
+        #                 )
+        #         new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
 
-            for param, value in zip(function.parameters, evaluated_arguments):
-                if param.type is not None:
-                    if not self._check_type_compatibility(value.value, param.type.value):
-                        raise TypeMismatchError(
-                            f"Argument '{param.name}' nie pasuje do typu {param.type} "
-                            f"(wartość = {value})."
-                        )
-                new_context.add_variable(param.name, value.value, self.map_object_type_to_vartype(param.type))
+        # self.context_stack.append(new_context)
+        # self.context = new_context
 
-        self.context_stack.append(new_context)
-        self.context = new_context
-
-        try:
-            function.block.accept(self)
-            self.return_flag = None
-            result = self.last_result
-        finally:
-            self.context_stack.pop()
-            self.context = self.context_stack[-1]
-        self.last_result = result
+        # try:
+        #     function.block.accept(self)
+        #     self.return_flag = None
+        #     result = self.last_result
+        # finally:
+        #     self.context_stack.pop()
+        #     self.context = self.context_stack[-1]
+        # self.last_result = result
 
 
 
