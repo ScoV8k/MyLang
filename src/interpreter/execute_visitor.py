@@ -89,9 +89,12 @@ class ExecuteVisitor(Visitor):
 
         self.context_stack.append(new_context)
         self.context = new_context
+        self.context.function_type = function.type
 
         try:
             function.block.accept(self)
+            if (self.return_value is None) and type(function.type) != VoidType:
+                raise InterpreterError(f"Brak instrukcji return w funkcji typu {function.type}.")
             self.return_flag = None
             result = self.last_result
         finally:
@@ -103,20 +106,27 @@ class ExecuteVisitor(Visitor):
         # function.block.accept(self)
 
 
-    def visit_function_arguments(self, element):
-        for arg in element:
-            arg.accept(self)
+    # def visit_function_arguments(self, element):
+    #     for arg in element:
+    #         arg.accept(self)
 
 
     def visit_return_statement(self, element: ReturnStatement):
+        self.return_value = None
+        self.last_result = None
         if element.expr is not None:
+            if type(self.context.function_type) == VoidType:
+                raise InterpreterError(f"Instrukcja return w funkcji void nie powinna zwracać wartości {element.position}")
             element.expr.accept(self)
+            if self.last_result is None:
+                raise InterpreterError(f"Instrukcja return w funkcji typu {self.context.function_type} nie zwróciła wartości {element.position}.")
+            if self.map_object_type_to_vartype(self.context.function_type) != self.last_result.type:
+                raise InterpreterError(f"Instrukcja return w funkcji typu {self.context.function_type} zwróciła wartość typu {self.last_result.type} na pozycji {element.position}.")
+            self.return_value = self.last_result
         self.return_flag = True
-        self.return_value = self.last_result
 
     def visit_identifier(self, element: Identifier):
         self.last_result = self.context.get_variable(element.name)
-        self.last_result_type = self.context.get_variable_type(element.name)
         
 
     def visit_parameter(self, element):
@@ -133,13 +143,14 @@ class ExecuteVisitor(Visitor):
 
     def visit_while_statement(self, element: WhileStatement):
         self.context.while_flag += 1
+        element.condition.accept(self)
         while self.last_result:
-            element.condition.accept(self)
             if not self.last_result.value or self.break_flag:
                 break
             element.statements.accept(self)
             if self.return_flag or self.break_flag:
                 break
+            element.condition.accept(self)
         self.context.while_flag -= 1
         self.break_flag = False
 
@@ -147,8 +158,9 @@ class ExecuteVisitor(Visitor):
 
     def visit_for_each_statement(self, element: ForEachStatement):
         element.struct.accept(self)
-
-        dict_value = self.last_result  
+        dict_value = self.last_result
+        if dict_value is None:
+                raise InterpreterError(f"Podany słownik wyrażenia for each na pozycji {element.position} nie zwrócił żadnej wartości.")
         if dict_value.type != VarType.DICT:
             raise InterpreterError(
                 f"Pętla 'for each' wymaga słownika, otrzymano typ: {dict_value.type}."
@@ -165,6 +177,8 @@ class ExecuteVisitor(Visitor):
     def visit_or_expression(self, element: OrExpression):
         for expr in element.expressions:
             expr.accept(self)
+            if self.last_result is None:
+                raise InterpreterError(f"Argument \"or\" na pozycji {expr.position} nie zwróciło żadnej wartości.")
             if self.last_result.value: 
                 self.last_result.value = True
                 return
@@ -174,6 +188,8 @@ class ExecuteVisitor(Visitor):
     def visit_and_expression(self, element: AndExpression):
         for expr in element.expressions:
             expr.accept(self) 
+            if self.last_result is None:
+                raise InterpreterError(f"Argument \"and\" na pozycji {expr.position} nie zwróciło żadnej wartości.")
             if not self.last_result.value:
                 self.last_result.value = False
                 return
@@ -268,10 +284,14 @@ class ExecuteVisitor(Visitor):
         element.left.accept(self)
         left_var = self.last_result
         left_value = left_var.value
+        if left_var is None:
+            raise InterpreterError(f"Prawa wartość wyrażenia mnożenia nie może być pusta {element.position}.") 
         
         element.right.accept(self)
         right_var = self.last_result
         right_value = right_var.value
+        if right_var is None:
+            raise InterpreterError(f"Prawa wartość wyrażenia mnożenia nie może być pusta {element.position}.") 
 
         if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
             result_value = left_value * right_value
@@ -301,8 +321,12 @@ class ExecuteVisitor(Visitor):
     def visit_div_expression(self, element: DivExpression):
         element.left.accept(self)
         left_var = self.last_result
+        if left_var is None:
+            raise InterpreterError(f"Lewa wartość wyrażenia dzielenia nie może być pusta {element.position}.") 
         element.right.accept(self)
         right_var = self.last_result
+        if right_var is None:
+            raise InterpreterError(f"Prawa wartość wyrażenia dzielenia nie może być pusta {element.position}.") 
         
         if not isinstance(left_var.value, (int, float)):
             raise TypeError(f"Lewy operand '/' musi być liczbą, otrzymano: {type(left_var.value).__name__}.")
@@ -438,11 +462,15 @@ class ExecuteVisitor(Visitor):
         if element.value:
             element.value.accept(self)
         value = self.last_result
-
+        if not isinstance(element.target, Identifier):
+            raise InterpreterError(f"Przypisanie dozwolone tylko do identyfikatora, pozycja {element.position}")
         variable_name = element.target.name
-
+        # element.target.accept(self)
+        # variable = self.last_result
+        # value_to_set = value.value
+        # variable.value = 
         value_to_set = value.value
-        if variable_name in self.context.variables:
+        if self.context.has_variable(variable_name):
             self.context.set_variable(variable_name, value_to_set)
         else:
             raise AssignmentError(variable_name)
@@ -562,6 +590,7 @@ class ExecuteVisitor(Visitor):
 
     def visit_block(self, element: Block):
         for statement in element.statements:
+            self.last_result = None
             statement.accept(self)
             if self.return_flag or self.break_flag:
                 break

@@ -1,5 +1,5 @@
 # from .builtins import built_in_functions
-from src.parser.objects import FunctionCall, FunctionArguments
+from src.parser.objects import FunctionCall
 from src.interpreter.variable import VarType, Variable
 from src.interpreter.typed_value import TypedValue
 from src.errors.interpreter_errors import VariableError
@@ -8,6 +8,7 @@ class Context:
     def __init__(self):
         self.variables = {}
         self.while_flag = 0
+        self.function_type = None
     
     def add_variable(self, name, value, type):
         if name in self.variables:

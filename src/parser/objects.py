@@ -57,19 +57,19 @@ class FunctionDefintion(Node):
                 f"  Parameters: [{params_str}]\n"
                 f"  Statements:\n    {str(self.block)}")
 
-class FunctionArguments(Node):
-    def __init__(self, position, arguments) -> None:
-        super().__init__(position)
-        self.arguments = arguments
+# class FunctionArguments(Node):
+#     def __init__(self, position, arguments) -> None:
+#         super().__init__(position)
+#         self.arguments = arguments
 
-    def accept(self, visitor: Visitor) -> None:
-        visitor.visit_function_arguments(self)
+#     def accept(self, visitor: Visitor) -> None:
+#         visitor.visit_function_arguments(self)
 
-    def __eq__(self, other):
-        if not isinstance(other, FunctionArguments):
-            return False
-        return (self.arguments == other.arguments and 
-                self.position == other.position)
+#     def __eq__(self, other):
+#         if not isinstance(other, FunctionArguments):
+#             return False
+#         return (self.arguments == other.arguments and 
+#                 self.position == other.position)
 
 
 class ReturnStatement(Node):

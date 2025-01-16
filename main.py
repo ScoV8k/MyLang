@@ -1,6 +1,6 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
-from src.parser.objects import AndExpression, Assignment, Block, BoolType, DivExpression, EqualityOperation, FloatType, ForEachStatement, FunctionArguments, FunctionCall, Identifier, IntegerType, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, Program, StringType, StringValue, SumExpression, TypeExpression, TypeMatch
+from src.parser.objects import AndExpression, Assignment, Block, BoolType, DivExpression, EqualityOperation, FloatType, ForEachStatement, FunctionCall, Identifier, IntegerType, IntegerValue, LessOperation, MatchCase, MulExpression, Negation, ObjectAccess, Parameter, FunctionDefintion, Program, StringType, StringValue, SumExpression, TypeExpression, TypeMatch
 from src.lexer.tokens import TokenType, Token
 from src.errors.error_manager import ErrorManager
 from src.errors.lexer_errors import InvalidTokenError, IdentifierTooLongError, LeadingZeroError,NumberTooBigError, StringTooLongError, UnterminatedStringError, InvalidEscapeSequenceError, CommentTooLongError, TooManyWhitespacesError, UnknownTokenError
@@ -17,9 +17,8 @@ def main():
         file_path = sys.argv[1]
         try:
             with open(file_path, 'r') as file:
-                source = io.StringIO(file.read())
                 error_manager = ErrorManager()
-                lexer = Lexer(source, error_manager)
+                lexer = Lexer(file, error_manager)
                 parser = Parser(lexer, error_manager)
                 visitor = ExecuteVisitor()
                 printerVisitor = PrintVisitor()

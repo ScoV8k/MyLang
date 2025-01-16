@@ -9,9 +9,9 @@ class Visitor(ABC):
     def visit_function_definition(self, element):
         pass
 
-    @abstractmethod
-    def visit_function_arguments(self, element):
-        pass
+    # @abstractmethod
+    # def visit_function_arguments(self, element):
+    #     pass
 
     @abstractmethod
     def visit_return_statement(self, element):

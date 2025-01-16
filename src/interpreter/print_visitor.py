@@ -23,8 +23,8 @@ class PrintVisitor(Visitor):
         node.block.accept(self)
         self.indent_level -= 1
 
-    def visit_function_arguments(self, element: FunctionArguments):
-        return super().visit_function_arguments(element)
+    # def visit_function_arguments(self, element: FunctionArguments):
+    #     return super().visit_function_arguments(element)
     
     def visit_return_statement(self, node: ReturnStatement):
         self._print_indent(f"ReturnStatement at {node.position}")
@@ -78,7 +78,7 @@ class PrintVisitor(Visitor):
     def visit_or_expression(self, node: OrExpression):
         self._print_indent(f"OrExpression at {node.position}")
         self.indent_level += 1
-        for expr in node.nodes:
+        for expr in node.expressions:
             expr.accept(self)
         self.indent_level -= 1
 

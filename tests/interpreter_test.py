@@ -31,6 +31,7 @@ def test_variable_assignment():
     result = execute_code(source_code)
     assert result == 10
 
+
 def test_sum_expression():
     source_code = """
     int main() {
@@ -184,7 +185,7 @@ def test_conditional_statement():
 
 def test_type_expression_true():
     source_code = """
-    int main() {
+    bool main() {
         int a = 0;
         bool b = a is int;
         return b;
@@ -197,7 +198,7 @@ def test_type_expression_true():
 
 def test_type_expression_false():
     source_code = """
-    int main() {
+    bool main() {
         int a = 0;
         bool b = a is float;
         return b;
@@ -209,8 +210,8 @@ def test_type_expression_false():
 
 def test_negation_logic_int():
     source_code = """
-    int main() {
-        int a = not 5;
+    bool main() {
+        bool a = not 5;
         return a;
     }
     """
@@ -285,7 +286,7 @@ def test_type_match_int():
     result = execute_code(source_code)
     assert result == 111
 
-# def test_type_match_float():
+def test_type_match_float():
     source_code = """
     float main() {
         float y = 3.14;
@@ -294,7 +295,7 @@ def test_type_match_int():
                 return 888;
             }
             float => {
-                return 333;
+                return 333.0;
             }
             _ => {
                 return 999;
@@ -303,7 +304,7 @@ def test_type_match_int():
     }
     """
     result = execute_code(source_code)
-    assert result == 333
+    assert result == 333.0
 
 def test_type_match_underscore():
     source_code = """

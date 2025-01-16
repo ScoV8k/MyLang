@@ -16,12 +16,6 @@ MAX_WHITESPACES = 1024
 
 class Lexer():
     def __init__(self, source, error_manager) -> None: 
-        # MAX_IDENTIFIER_LENGTH = 128
-        # MAX_INT = 2147483647
-        # MAX_FLOAT = 3.402823466e+38
-        # MAX_STRING_LENGTH = 2**16
-        # MAX_COMMENT_LENGTH = 256
-        # MAX_WHITESPACES = 1024
         self.source = source
         self.current_char = chr(2)
         self.etx = chr(3)
