@@ -15,6 +15,7 @@ class Context:
             raise VariableError(name)
         self.variables[name] = Variable(value, type)
 
+
     def reset_flags(self):
         self.break_flag = False
 
